@@ -237,6 +237,14 @@ class Program:
             if self._killed.is_set():
                 break
 
+            # Apply the optional message filter before any further processing,
+            # matching Go's WithFilter semantics: the filter sees every message
+            # including QuitMsg and InterruptMsg.
+            if self._filter is not None:
+                msg = self._filter(self.model, msg)
+                if msg is None:
+                    continue  # message discarded by filter
+
             # Graceful quit via QuitMsg.
             if isinstance(msg, QuitMsg):
                 break
@@ -292,12 +300,6 @@ class Program:
             elif isinstance(msg, ExecMsg):
                 self._handle_exec(msg)
                 continue
-
-            # Apply the optional message filter before update().
-            if self._filter is not None:
-                msg = self._filter(self.model, msg)
-                if msg is None:
-                    continue  # message discarded by filter
 
             # Hand the message to the model.
             self.model, cmd = self.model.update(msg)
@@ -449,9 +451,16 @@ class Program:
         def handle_term(signum: int, frame: Any) -> None:
             self._msg_queue.put(QuitMsg())
 
-        signal.signal(signal.SIGWINCH, handle_resize)
-        signal.signal(signal.SIGINT, handle_int)
-        signal.signal(signal.SIGTERM, handle_term)
+        try:
+            signal.signal(signal.SIGWINCH, handle_resize)
+            signal.signal(signal.SIGINT, handle_int)
+            signal.signal(signal.SIGTERM, handle_term)
+        except ValueError:
+            # signal.signal() only works in the main thread.  When run()
+            # is called from a background thread (e.g. in tests) we skip
+            # signal setup silently — keyboard interrupts won't be caught
+            # but the program will still exit via quit() / kill().
+            pass
 
     def release_terminal(self) -> None:
         """Temporarily restore the terminal to its original cooked mode.
@@ -608,7 +617,13 @@ class Program:
     def _start_input_reader(self) -> None:
         """Start the input reader thread."""
         def read_input() -> None:
-            fd = self.input_tty.fileno()
+            try:
+                fd = self.input_tty.fileno()
+            except Exception:
+                # The input stream is not a real TTY (e.g. redirected in tests).
+                # Skip input reading entirely; the program can still be driven
+                # via Program.send() / Program.quit() / Program.kill().
+                return
             # Bracketed paste accumulation state.
             in_paste = False
             paste_buf: list[str] = []

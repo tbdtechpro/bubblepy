@@ -39,7 +39,7 @@ from .commands import (
     window_size,
 )
 from .exec import ExecCmd, exec_process
-from .logging import log_to_file
+from .log import log_to_file
 from .screen import (
     enter_alt_screen,
     exit_alt_screen,
