@@ -45,20 +45,20 @@ These are bugs or missing wiring in the current implementation that affect corre
   - `fps` clamped to `[1, 120]`. Default 60 FPS.
   - File: `renderer.py`, `tea.py`
 
-- [ ] **Wire up SIGTERM for graceful shutdown**
-  - `_setup_signals()` only registers `SIGWINCH` (window resize). `SIGTERM` (e.g. from
-    `kill <pid>`) is not caught, leaving the terminal in raw mode on unexpected exit.
-  - Register a `SIGTERM` handler that sends `QuitMsg` through the message queue.
+- [x] **Wire up SIGTERM for graceful shutdown**
+  - `_setup_signals()` now registers a `SIGTERM` handler that enqueues `QuitMsg`,
+    ensuring the terminal is restored via `_cleanup()` on `kill <pid>`.
   - File: `tea.py`
 
-- [ ] **Add `SuspendMsg` / `ResumeMsg` and SIGTSTP handling**
-  - Go supports `SuspendMsg` (triggered by `Suspend()` or Ctrl-Z), which pauses the TUI,
-    sends `SIGTSTP`, and resumes on `SIGCONT`, emitting `ResumeMsg`.
-  - Add `SuspendMsg` and `ResumeMsg` dataclasses to `messages.py`.
-  - In `_event_loop()` handle `SuspendMsg`: restore terminal, send `SIGTSTP` to self,
-    wait for `SIGCONT`, re-enter raw mode, emit `ResumeMsg`.
-  - Export from `__init__.py`.
-  - Files: `messages.py`, `tea.py`, `__init__.py`
+- [x] **Add `SuspendMsg` / `ResumeMsg` and SIGTSTP handling**
+  - `SuspendMsg` and `ResumeMsg` added to `messages.py` and exported from `__init__.py`.
+  - `suspend()` command factory added to `screen.py` — returns a `Cmd` that produces
+    `SuspendMsg`.
+  - Event loop handles `SuspendMsg` via `_suspend()`: stops renderer, restores terminal
+    to cooked mode, registers SIGCONT handler, sends SIGTSTP to self, waits for SIGCONT,
+    re-enters raw mode, restarts renderer, repaints, enqueues `ResumeMsg`.
+  - Only runs on Unix; silently no-ops on platforms without `signal.SIGTSTP`.
+  - Files: `messages.py`, `screen.py`, `tea.py`, `__init__.py`
 
 - [ ] **Add `Program.kill()` for immediate shutdown**
   - `Program.quit()` sends `QuitMsg` (graceful). `kill()` should set the quit event and

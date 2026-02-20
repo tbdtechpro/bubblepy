@@ -16,6 +16,8 @@ from .messages import (
     QuitMsg,
     ClearScreenMsg,
     SetWindowTitleMsg,
+    SuspendMsg,
+    ResumeMsg,
 )
 from .keys import Key, KeyType
 from .mouse import MouseButton, MouseAction, MouseEvent
@@ -39,6 +41,7 @@ from .screen import (
     disable_mouse,
     show_cursor,
     hide_cursor,
+    suspend,
 )
 
 __all__ = [
@@ -55,6 +58,8 @@ __all__ = [
     "QuitMsg",
     "ClearScreenMsg",
     "SetWindowTitleMsg",
+    "SuspendMsg",
+    "ResumeMsg",
     # Keys
     "Key",
     "KeyType",
@@ -81,6 +86,7 @@ __all__ = [
     "disable_mouse",
     "show_cursor",
     "hide_cursor",
+    "suspend",
     # Version
     "__version__",
 ]

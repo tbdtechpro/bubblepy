@@ -3,7 +3,7 @@
 import sys
 from dataclasses import dataclass
 from typing import Optional
-from .messages import Msg
+from .messages import Msg, SuspendMsg
 from .commands import Cmd
 
 
@@ -130,6 +130,18 @@ def hide_cursor() -> Cmd:
     """Command to hide the cursor."""
     def cmd() -> Msg:
         return HideCursorMsg()
+    return cmd
+
+
+def suspend() -> Cmd:
+    """Command to suspend the program (equivalent to ctrl+z / SIGTSTP).
+
+    The event loop handles SuspendMsg by restoring the terminal, sending
+    SIGTSTP to the process, and emitting ResumeMsg when SIGCONT is received.
+    Not supported on Windows; the message is silently ignored there.
+    """
+    def cmd() -> Msg:
+        return SuspendMsg()
     return cmd
 
 
