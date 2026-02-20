@@ -26,3 +26,5 @@ conventions, and notes for AI assistants.
 | `PYTHON_FEASIBILITY.md` | Analysis of Go features that are hard/infeasible in Python |
 | `CLAUDE.md` | Detailed guide for AI assistants working in this repo |
 | `Contributing.md` | Developer workflow and contribution notes |
+| `CHANGELOG.md` | Version history for the Python port |
+| `ATTRIBUTION.md` | Credits — original Charm team, Elm Architecture, AI tooling |

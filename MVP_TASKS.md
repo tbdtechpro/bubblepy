@@ -185,11 +185,11 @@ Features present in the Go library that have no Python equivalent.
     preventing interleaved output between the ticker thread and the event-loop thread.
   - File: `renderer.py`
 
-- [ ] **Add renderer lifecycle methods (`start()`, `stop()`, `kill()`) and state queries**
+- [x] **Add renderer lifecycle methods (`start()`, `stop()`, `kill()`) and state queries**
   - `start()` / `stop()` / `kill()` / `repaint()` added to `Renderer` and `NullRenderer`.
   - `alt_screen_active()` and `is_cursor_hidden()` state query methods added.
-  - *Note: `start()`/`stop()` are now implemented as part of Task 6 (FPS rendering).*
-  - File: `renderer.py` ✅ (completed with Task 6)
+  - Completed as part of Task 6 (FPS rendering).
+  - File: `renderer.py`
 
 - [x] **Add bracketed paste support**
   - `PasteStartMsg`, `PasteEndMsg`, `PasteMsg` dataclasses added to `messages.py` and
