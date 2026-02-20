@@ -60,19 +60,37 @@ class Program:
         mouse_all_motion: bool = False,
         bracketed_paste: bool = False,
         fps: int = 60,
+        stop_event: Optional[Event] = None,
+        filter: Optional[Callable[[Model, Msg], Optional[Msg]]] = None,
+        report_focus: bool = False,
+        use_null_renderer: bool = False,
     ):
-        """
-        Initialize a new Program.
-        
+        """Initialize a new Program.
+
         Args:
-            model: The initial model
-            input_tty: Input file (defaults to stdin)
-            output: Output file (defaults to stdout)
-            alt_screen: Whether to use alternate screen buffer
-            mouse_cell_motion: Enable mouse cell motion tracking
-            mouse_all_motion: Enable mouse all motion tracking
-            bracketed_paste: Enable bracketed paste mode
-            fps: Frames per second for rendering
+            model: The initial model.
+            input_tty: Input file (defaults to stdin).
+            output: Output file (defaults to stdout).
+            alt_screen: Whether to use alternate screen buffer.
+            mouse_cell_motion: Enable mouse cell motion tracking.
+            mouse_all_motion: Enable mouse all motion tracking.
+            bracketed_paste: Enable bracketed paste mode.
+            fps: Frames per second for rendering (clamped to [1, 120]).
+            stop_event: Optional threading.Event; when set, the program exits
+                gracefully as if quit() were called.  Equivalent to Go's
+                WithContext(ctx) — pass an Event that you set to cancel.
+            filter: Optional callable ``filter(model, msg) -> Optional[Msg]``.
+                Invoked for every message before it reaches model.update().
+                Return the (possibly transformed) message to continue normal
+                processing, or None to discard it.  Equivalent to Go's
+                WithFilter option.
+            report_focus: When True, enable terminal focus reporting.  The
+                input reader emits FocusMsg when the terminal gains focus and
+                BlurMsg when it loses focus.  Equivalent to Go's
+                WithReportFocus option.
+            use_null_renderer: When True, swap the normal renderer for
+                NullRenderer (all rendering is a no-op).  Useful for headless
+                testing.  Equivalent to Go's WithoutRenderer option.
         """
         self.model = model
         self.input_tty = input_tty or sys.stdin
@@ -81,8 +99,14 @@ class Program:
         self._mouse_cell_motion = mouse_cell_motion
         self._mouse_all_motion = mouse_all_motion
         self._bracketed_paste = bracketed_paste
-        
-        self._renderer = Renderer(self.output, fps)
+        self._stop_event = stop_event
+        self._filter = filter
+        self._report_focus = report_focus
+
+        self._renderer: Renderer = (
+            NullRenderer(self.output, fps) if use_null_renderer
+            else Renderer(self.output, fps)
+        )
         self._msg_queue: Queue[Msg] = Queue()
         self._quit = Event()
         self._killed = Event()
@@ -189,6 +213,10 @@ class Program:
     def _event_loop(self) -> None:
         """Main event loop."""
         while not self._quit.is_set():
+            # Context cancellation: treat an external stop_event like quit().
+            if self._stop_event is not None and self._stop_event.is_set():
+                break
+
             try:
                 # Wait for a message
                 msg = self._msg_queue.get(timeout=0.1)
@@ -251,6 +279,12 @@ class Program:
             elif isinstance(msg, SuspendMsg):
                 self._suspend()
                 continue
+
+            # Apply the optional message filter before update().
+            if self._filter is not None:
+                msg = self._filter(self.model, msg)
+                if msg is None:
+                    continue  # message discarded by filter
 
             # Hand the message to the model.
             self.model, cmd = self.model.update(msg)
@@ -349,6 +383,11 @@ class Program:
         if self._bracketed_paste:
             self.output.write("\x1b[?2004h")
             self.output.flush()
+
+        # Focus reporting
+        if self._report_focus:
+            self.output.write("\x1b[?1004h")
+            self.output.flush()
     
     def _cleanup(self) -> None:
         """Clean up terminal state."""
@@ -366,6 +405,11 @@ class Program:
         # Disable bracketed paste
         if self._bracketed_paste:
             self.output.write("\x1b[?2004l")
+            self.output.flush()
+
+        # Disable focus reporting
+        if self._report_focus:
+            self.output.write("\x1b[?1004l")
             self.output.flush()
         
         # Clean up renderer
@@ -395,6 +439,64 @@ class Program:
         signal.signal(signal.SIGWINCH, handle_resize)
         signal.signal(signal.SIGINT, handle_int)
         signal.signal(signal.SIGTERM, handle_term)
+
+    def release_terminal(self) -> None:
+        """Temporarily restore the terminal to its original cooked mode.
+
+        Stops the renderer, shows the cursor, exits alt-screen, disables
+        mouse, and restores the saved termios settings.  Call
+        restore_terminal() to reclaim the terminal and resume rendering.
+
+        Useful before launching an external process that needs full terminal
+        access (e.g. an editor).  Equivalent to Go's Program.ReleaseTerminal().
+        """
+        self._renderer.kill()
+        self._renderer.show_cursor()
+        self._renderer.exit_alt_screen()
+        self._renderer.disable_mouse()
+
+        if self._bracketed_paste:
+            self.output.write("\x1b[?2004l")
+            self.output.flush()
+
+        if self._report_focus:
+            self.output.write("\x1b[?1004l")
+            self.output.flush()
+
+        if self._old_termios is not None and self.input_tty.isatty():
+            termios.tcsetattr(
+                self.input_tty.fileno(), termios.TCSADRAIN, self._old_termios
+            )
+
+    def restore_terminal(self) -> None:
+        """Reclaim the terminal after release_terminal().
+
+        Re-enters raw mode, re-enables all configured terminal features,
+        restarts the renderer, and forces a full repaint.
+        Equivalent to Go's Program.RestoreTerminal().
+        """
+        if self.input_tty.isatty():
+            tty.setraw(self.input_tty.fileno())
+
+        if self._use_alt_screen:
+            self._renderer.enter_alt_screen()
+        if self._mouse_all_motion:
+            self._renderer.enable_mouse(all_motion=True)
+        elif self._mouse_cell_motion:
+            self._renderer.enable_mouse(all_motion=False)
+        self._renderer.hide_cursor()
+
+        if self._bracketed_paste:
+            self.output.write("\x1b[?2004h")
+            self.output.flush()
+
+        if self._report_focus:
+            self.output.write("\x1b[?1004h")
+            self.output.flush()
+
+        self._renderer.start()
+        self._renderer.repaint()
+        self._render()
 
     def _suspend(self) -> None:
         """Restore the terminal, suspend the process via SIGTSTP, then resume.
@@ -480,7 +582,16 @@ class Program:
                     data = os.read(fd, 256)
                     if not data:
                         continue
-                    
+
+                    # Focus / blur sequences (sent when report_focus=True).
+                    if self._report_focus:
+                        if data == b"\x1b[I":
+                            self._msg_queue.put(FocusMsg())
+                            continue
+                        if data == b"\x1b[O":
+                            self._msg_queue.put(BlurMsg())
+                            continue
+
                     # Try to parse as mouse event first
                     mouse_event = parse_mouse_event(data)
                     if mouse_event:
@@ -494,7 +605,7 @@ class Program:
                             shift=mouse_event.shift,
                         ))
                         continue
-                    
+
                     # Parse as key
                     key = parse_key(data)
                     if key:

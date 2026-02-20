@@ -113,38 +113,40 @@ These are bugs or missing wiring in the current implementation that affect corre
 
 Features present in the Go library that have no Python equivalent.
 
-- [ ] **Add `WithContext` / context-based cancellation**
-  - Accept an optional `threading.Event stop_event` in the constructor; check it in the
-    event loop timeout poll.
+- [x] **Add `WithContext` / context-based cancellation**
+  - `Program.__init__` accepts `stop_event: Optional[threading.Event]`.  The event loop
+    checks `stop_event.is_set()` on each iteration (before blocking on the queue) and
+    exits gracefully when it fires — equivalent to Go's `WithContext(ctx)`.
   - File: `tea.py`
 
-- [ ] **Add `WithFilter` / message filtering**
-  - Go's `WithFilter(func(Model, Msg) Msg)` lets the program intercept every message
-    before it reaches `Update`.
-  - Add a `filter: Optional[Callable[[Model, Msg], Optional[Msg]]]` parameter to
-    `Program.__init__`; apply it at the top of `_event_loop()`.
+- [x] **Add `WithFilter` / message filtering**
+  - `Program.__init__` accepts `filter: Optional[Callable[[Model, Msg], Optional[Msg]]]`.
+    Applied in `_event_loop()` before `model.update()`: returning the (possibly
+    transformed) message continues processing; returning `None` discards it.
+    Equivalent to Go's `WithFilter` option.
   - File: `tea.py`
 
-- [ ] **Add `WithReportFocus` / focus event reporting**
-  - `FocusMsg` and `BlurMsg` exist but are never emitted — the input reader does not
-    parse focus event escape sequences (`\x1b[I` = focus, `\x1b[O` = blur).
-  - Add a `report_focus: bool` constructor parameter; when enabled, write `\x1b[?1004h`
-    on setup, parse the sequences in `_start_input_reader`, put `FocusMsg`/`BlurMsg`
-    into the queue.
-  - Files: `tea.py`, `screen.py`
+- [x] **Add `WithReportFocus` / focus event reporting**
+  - `Program.__init__` accepts `report_focus: bool`.  When enabled:
+    - `_setup_terminal()` writes `\x1b[?1004h` to enable focus events.
+    - `_cleanup()` writes `\x1b[?1004l` to disable them.
+    - The input reader recognises `\x1b[I` → `FocusMsg` and `\x1b[O` → `BlurMsg`.
+  - Files: `tea.py`
 
-- [ ] **Add `use_null_renderer` option**
-  - Go allows `WithoutRenderer()` to disable all rendering output, useful for headless
-    testing.
-  - Add a `use_null_renderer: bool` constructor parameter that swaps `Renderer` for
-    `NullRenderer`.
+- [x] **Add `use_null_renderer` option**
+  - `Program.__init__` accepts `use_null_renderer: bool`.  When `True`, the renderer is
+    `NullRenderer` (all output suppressed), useful for headless testing.
+    Equivalent to Go's `WithoutRenderer()`.
   - File: `tea.py`
 
-- [ ] **Add `release_terminal()` / `restore_terminal()`**
-  - Go exposes these to temporarily hand the terminal back to the OS (e.g. before opening
-    an editor) and reclaim it afterwards.
-  - Implement `release_terminal()` (restore termios, stop renderer, disable mouse) and
-    `restore_terminal()` (re-enter raw mode, re-enable options, restart renderer, repaint).
+- [x] **Add `release_terminal()` / `restore_terminal()`**
+  - `release_terminal()`: stops renderer, shows cursor, exits alt-screen, disables mouse
+    and bracketed paste / focus reporting, restores termios to cooked mode.
+  - `restore_terminal()`: re-enters raw mode, re-enables all configured options, restarts
+    renderer, forces a full repaint.
+  - Used internally by `_suspend()` and can be called directly before launching an
+    external editor or subprocess.  Equivalent to Go's `Program.ReleaseTerminal()` /
+    `Program.RestoreTerminal()`.
   - File: `tea.py`
 
 - [ ] **Implement `exec_process()` for external command execution**
