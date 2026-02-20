@@ -71,6 +71,8 @@ class Program:
         self._renderer = Renderer(self.output, fps)
         self._msg_queue: Queue[Msg] = Queue()
         self._quit = Event()
+        self._killed = Event()
+        self._done = Event()
         self._running = False
         self._old_termios: Optional[list] = None
         self._input_thread: Optional[Thread] = None
@@ -103,14 +105,35 @@ class Program:
             
         finally:
             self._cleanup()
-        
+            self._done.set()
+
         return self.model
     
     def quit(self) -> None:
-        """Signal the program to quit."""
+        """Signal the program to quit gracefully."""
         self._quit.set()
         self._msg_queue.put(QuitMsg())
-    
+
+    def kill(self) -> None:
+        """Terminate the program immediately, bypassing any queued messages.
+
+        Unlike quit(), kill() does not wait for the message queue to drain.
+        The event loop exits on its next iteration regardless of what is
+        pending in the queue.  Equivalent to Go's Program.Kill().
+        """
+        self._killed.set()
+        self._quit.set()
+        self._msg_queue.put(QuitMsg())  # unblock queue.get()
+
+    def wait(self) -> None:
+        """Block until the program has fully exited and the terminal is restored.
+
+        Useful when driving the program from a separate thread: call kill()
+        or quit() from that thread, then wait() to ensure cleanup is complete
+        before accessing the terminal again.  Equivalent to Go's Program.Wait().
+        """
+        self._done.wait()
+
     def send(self, msg: Msg) -> None:
         """Send a message to the program."""
         self._msg_queue.put(msg)
@@ -124,7 +147,11 @@ class Program:
             except Empty:
                 continue
 
-            # Lifecycle
+            # kill() exits immediately, bypassing remaining queued messages.
+            if self._killed.is_set():
+                break
+
+            # Graceful quit via QuitMsg.
             if isinstance(msg, QuitMsg):
                 break
 

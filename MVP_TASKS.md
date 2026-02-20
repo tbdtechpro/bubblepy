@@ -60,15 +60,18 @@ These are bugs or missing wiring in the current implementation that affect corre
   - Only runs on Unix; silently no-ops on platforms without `signal.SIGTSTP`.
   - Files: `messages.py`, `screen.py`, `tea.py`, `__init__.py`
 
-- [ ] **Add `Program.kill()` for immediate shutdown**
-  - `Program.quit()` sends `QuitMsg` (graceful). `kill()` should set the quit event and
-    skip the final render — equivalent to Go's `Program.Kill()`.
+- [x] **Add `Program.kill()` for immediate shutdown**
+  - `kill()` sets `_killed` and `_quit` Events and puts a `QuitMsg` to unblock the
+    queue's `get()` call.  The event loop checks `_killed` immediately after each
+    dequeue and exits before processing the message, bypassing any remaining queued
+    messages — equivalent to Go's `Program.Kill()`.
   - File: `tea.py`
 
-- [ ] **Add `Program.wait()` to block until the program exits**
-  - Go's `Program.Wait()` blocks until shutdown is complete, useful when driving the
-    program from a separate thread.
-  - Implement using a `threading.Event` that is set at the end of `run()`.
+- [x] **Add `Program.wait()` to block until the program exits**
+  - Added `_done: threading.Event`; `run()` sets it in its `finally` block after
+    `_cleanup()` completes.  `wait()` delegates to `_done.wait()`, allowing any
+    thread that called `kill()` or `quit()` to block until the terminal is fully
+    restored — equivalent to Go's `Program.Wait()`.
   - File: `tea.py`
 
 - [ ] **Add `Program.println()` / `Program.printf()` to print above the TUI**
