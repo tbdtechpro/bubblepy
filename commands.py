@@ -2,11 +2,10 @@
 
 import os
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Callable, Optional
 
-from .messages import Msg, QuitMsg, ClearScreenMsg, SetWindowTitleMsg, WindowSizeMsg
-
+from .messages import ClearScreenMsg, Msg, QuitMsg, SetWindowTitleMsg, WindowSizeMsg
 
 # A Cmd is a callable that returns an optional Msg.
 Cmd = Callable[[], Optional[Msg]]
@@ -19,6 +18,7 @@ class BatchMsg(Msg):
     Returned by batch(). The program launches each command in its own
     thread and delivers every resulting message independently to update().
     """
+
     cmds: list  # list[Cmd]
 
 
@@ -29,6 +29,7 @@ class SequenceMsg(Msg):
     Returned by sequence(). The program runs each command in order,
     delivering each resulting message to update() before starting the next.
     """
+
     cmds: list  # list[Cmd]
 
 
@@ -115,6 +116,7 @@ def set_window_title(title: str) -> Cmd:
     Returns:
         A command that sets the window title.
     """
+
     def cmd() -> Msg:
         return SetWindowTitleMsg(title=title)
 
@@ -127,6 +129,7 @@ def clear_screen() -> Cmd:
     Returns:
         A command that clears the screen.
     """
+
     def cmd() -> Msg:
         return ClearScreenMsg()
 
@@ -143,6 +146,7 @@ def tick(duration_seconds: float, fn: Callable[[], Msg]) -> Cmd:
     Returns:
         A command that waits, then returns fn().
     """
+
     def cmd() -> Optional[Msg]:
         time.sleep(duration_seconds)
         return fn()
@@ -164,6 +168,7 @@ def window_size() -> Cmd:
         def init(self):
             return tea.window_size()  # get size immediately on start
     """
+
     def cmd() -> Optional[Msg]:
         try:
             size = os.get_terminal_size()
@@ -196,6 +201,7 @@ def every(interval_seconds: float, fn: Callable[[], Msg]) -> Cmd:
     Returns:
         A command that waits for the interval, then returns fn().
     """
+
     def cmd() -> Optional[Msg]:
         time.sleep(interval_seconds)
         return fn()

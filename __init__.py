@@ -4,52 +4,52 @@ Bubble Tea - A Python TUI framework based on The Elm Architecture.
 Ported from the Go library: https://github.com/charmbracelet/bubbletea
 """
 
-from .model import Model
-from .tea import Program, ErrInterrupted, ErrProgramKilled, ErrProgramPanic
-from .messages import (
-    Msg,
-    KeyMsg,
-    MouseMsg,
-    WindowSizeMsg,
-    FocusMsg,
-    BlurMsg,
-    QuitMsg,
-    InterruptMsg,
-    ClearScreenMsg,
-    SetWindowTitleMsg,
-    SuspendMsg,
-    ResumeMsg,
-    PasteStartMsg,
-    PasteEndMsg,
-    PasteMsg,
-)
-from .keys import Key, KeyType
-from .mouse import MouseButton, MouseAction, MouseEvent
 from .commands import (
-    Cmd,
     BatchMsg,
+    Cmd,
     SequenceMsg,
-    quit_cmd,
     batch,
+    clear_screen,
+    every,
+    quit_cmd,
     sequence,
     set_window_title,
-    clear_screen,
     tick,
-    every,
     window_size,
 )
 from .exec import ExecCmd, exec_process
+from .keys import Key, KeyType
 from .log import log_to_file
+from .messages import (
+    BlurMsg,
+    ClearScreenMsg,
+    FocusMsg,
+    InterruptMsg,
+    KeyMsg,
+    MouseMsg,
+    Msg,
+    PasteEndMsg,
+    PasteMsg,
+    PasteStartMsg,
+    QuitMsg,
+    ResumeMsg,
+    SetWindowTitleMsg,
+    SuspendMsg,
+    WindowSizeMsg,
+)
+from .model import Model
+from .mouse import MouseAction, MouseButton, MouseEvent
 from .screen import (
+    disable_mouse,
+    enable_mouse_all_motion,
+    enable_mouse_cell_motion,
     enter_alt_screen,
     exit_alt_screen,
-    enable_mouse_cell_motion,
-    enable_mouse_all_motion,
-    disable_mouse,
-    show_cursor,
     hide_cursor,
+    show_cursor,
     suspend,
 )
+from .tea import ErrInterrupted, ErrProgramKilled, ErrProgramPanic, Program
 
 __all__ = [
     # Core

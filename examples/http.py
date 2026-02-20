@@ -15,13 +15,12 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-import urllib.request
 import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from typing import Optional
 
 import bubbletea as tea
-
 
 URL = "https://charm.sh"
 
@@ -80,6 +79,7 @@ class HttpModel(tea.Model):
 
 def fetch_url(url: str) -> tea.Cmd:
     """Return a Cmd that fetches url and delivers the result as a message."""
+
     def cmd() -> tea.Msg:
         try:
             with urllib.request.urlopen(url, timeout=10) as resp:

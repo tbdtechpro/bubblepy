@@ -11,8 +11,8 @@ Run:
 """
 
 import os
-import sys
 import random
+import sys
 import threading
 import time
 
@@ -23,12 +23,20 @@ from typing import Optional
 
 import bubbletea as tea
 
-
 FOODS = [
-    "an apple", "a pear", "a gherkin", "a party gherkin",
-    "a kohlrabi", "some spaghetti", "tacos", "a currywurst",
-    "some curry", "a sandwich", "some peanut butter",
-    "some cashews", "some ramen",
+    "an apple",
+    "a pear",
+    "a gherkin",
+    "a party gherkin",
+    "a kohlrabi",
+    "some spaghetti",
+    "tacos",
+    "a currywurst",
+    "some curry",
+    "a sandwich",
+    "some peanut butter",
+    "some cashews",
+    "some ramen",
 ]
 
 SPINNER_FRAMES = ["|", "/", "-", "\\"]
@@ -62,7 +70,7 @@ class SendMsgModel(tea.Model):
             return self, tea.quit_cmd
 
         if isinstance(msg, ResultMsg):
-            self.results = (self.results + [msg])[-self.MAX_RESULTS:]
+            self.results = (self.results + [msg])[-self.MAX_RESULTS :]
             return self, None
 
         if isinstance(msg, SpinnerTickMsg):

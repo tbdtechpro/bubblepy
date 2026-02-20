@@ -1,26 +1,24 @@
 """Tests for screen.py — command factories and message types."""
 
-import pytest
-
 import bubbletea as tea
+from bubbletea.messages import SuspendMsg
 from bubbletea.screen import (
-    enter_alt_screen,
-    exit_alt_screen,
-    enable_mouse_cell_motion,
-    enable_mouse_all_motion,
-    disable_mouse,
-    show_cursor,
-    hide_cursor,
-    suspend,
+    DisableMouseMsg,
+    EnableMouseAllMotionMsg,
+    EnableMouseCellMotionMsg,
     EnterAltScreenMsg,
     ExitAltScreenMsg,
-    EnableMouseCellMotionMsg,
-    EnableMouseAllMotionMsg,
-    DisableMouseMsg,
-    ShowCursorMsg,
     HideCursorMsg,
+    ShowCursorMsg,
+    disable_mouse,
+    enable_mouse_all_motion,
+    enable_mouse_cell_motion,
+    enter_alt_screen,
+    exit_alt_screen,
+    hide_cursor,
+    show_cursor,
+    suspend,
 )
-from bubbletea.messages import SuspendMsg
 
 
 class TestScreenCommandFactories:

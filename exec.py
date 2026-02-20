@@ -7,12 +7,11 @@ the result via a callback message.
 Equivalent to Go's exec.go / tea.ExecProcess().
 """
 
-import subprocess
 from dataclasses import dataclass, field
-from typing import Callable, List, Optional, Sequence
+from typing import Callable, Optional, Sequence
 
-from .messages import Msg
 from .commands import Cmd
+from .messages import Msg
 
 
 @dataclass
