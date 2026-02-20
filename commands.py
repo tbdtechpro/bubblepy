@@ -19,7 +19,7 @@ class BatchMsg(Msg):
     thread and delivers every resulting message independently to update().
     """
 
-    cmds: list  # list[Cmd]
+    cmds: list[Cmd]
 
 
 @dataclass
@@ -30,7 +30,7 @@ class SequenceMsg(Msg):
     delivering each resulting message to update() before starting the next.
     """
 
-    cmds: list  # list[Cmd]
+    cmds: list[Cmd]
 
 
 def quit_cmd() -> Msg:
