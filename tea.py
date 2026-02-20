@@ -15,6 +15,7 @@ from .messages import (
     Msg, KeyMsg, MouseMsg, WindowSizeMsg,
     QuitMsg, FocusMsg, BlurMsg,
     ClearScreenMsg, SetWindowTitleMsg,
+    SuspendMsg, ResumeMsg,
 )
 from .keys import parse_key
 from .mouse import parse_mouse_event
@@ -165,6 +166,9 @@ class Program:
             elif isinstance(msg, SetWindowTitleMsg):
                 self._renderer.set_window_title(msg.title)
                 continue
+            elif isinstance(msg, SuspendMsg):
+                self._suspend()
+                continue
 
             # Hand the message to the model.
             self.model, cmd = self.model.update(msg)
@@ -285,15 +289,86 @@ class Program:
     
     def _setup_signals(self) -> None:
         """Set up signal handlers."""
-        def handle_resize(signum, frame):
+        def handle_resize(signum: int, frame: Any) -> None:
             try:
                 size = os.get_terminal_size()
                 self._msg_queue.put(WindowSizeMsg(size.columns, size.lines))
             except OSError:
                 pass
-        
+
+        def handle_term(signum: int, frame: Any) -> None:
+            self._msg_queue.put(QuitMsg())
+
         signal.signal(signal.SIGWINCH, handle_resize)
-    
+        signal.signal(signal.SIGTERM, handle_term)
+
+    def _suspend(self) -> None:
+        """Restore the terminal, suspend the process via SIGTSTP, then resume.
+
+        Called when SuspendMsg is received.  The sequence is:
+          1. Stop the renderer and restore the terminal to cooked mode.
+          2. Register a SIGCONT handler and send SIGTSTP to the current process.
+          3. The OS suspends the entire process (all threads pause here).
+          4. When the user runs `fg` / sends SIGCONT, the process resumes.
+          5. Re-enter raw mode, restart the renderer, repaint, send ResumeMsg.
+
+        Only available on Unix.  On platforms without SIGTSTP the method
+        returns immediately without doing anything.
+        """
+        if not hasattr(signal, 'SIGTSTP'):
+            return
+
+        # 1. Stop the renderer without a final flush and restore the terminal.
+        self._renderer.kill()
+        self._renderer.show_cursor()
+        self._renderer.exit_alt_screen()
+        self._renderer.disable_mouse()
+
+        if self._bracketed_paste:
+            self.output.write("\x1b[?2004l")
+            self.output.flush()
+
+        if self._old_termios is not None and self.input_tty.isatty():
+            termios.tcsetattr(
+                self.input_tty.fileno(), termios.TCSADRAIN, self._old_termios
+            )
+
+        # 2. Register SIGCONT handler and suspend.
+        sigcont_received = Event()
+        original_sigcont = signal.getsignal(signal.SIGCONT)
+
+        def on_sigcont(signum: int, frame: Any) -> None:
+            sigcont_received.set()
+
+        signal.signal(signal.SIGCONT, on_sigcont)
+        os.kill(os.getpid(), signal.SIGTSTP)
+
+        # 3–4. The process is stopped here until SIGCONT is received.
+        sigcont_received.wait()
+        signal.signal(signal.SIGCONT, original_sigcont)
+
+        # 5. Re-enter raw mode and restart all terminal features.
+        if self.input_tty.isatty():
+            tty.setraw(self.input_tty.fileno())
+
+        if self._use_alt_screen:
+            self._renderer.enter_alt_screen()
+        if self._mouse_all_motion:
+            self._renderer.enable_mouse(all_motion=True)
+        elif self._mouse_cell_motion:
+            self._renderer.enable_mouse(all_motion=False)
+        self._renderer.hide_cursor()
+
+        if self._bracketed_paste:
+            self.output.write("\x1b[?2004h")
+            self.output.flush()
+
+        self._renderer.start()
+        self._renderer.repaint()
+        self._render()
+
+        self._msg_queue.put(ResumeMsg())
+
     def _start_input_reader(self) -> None:
         """Start the input reader thread."""
         def read_input():

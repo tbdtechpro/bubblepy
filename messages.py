@@ -65,6 +65,23 @@ class CustomMsg(Msg):
 
 
 @dataclass
+class SuspendMsg(Msg):
+    """Message that suspends the program (e.g. ctrl+z / SIGTSTP).
+
+    The event loop handles this by restoring the terminal, sending SIGTSTP
+    to the process, and emitting ResumeMsg when SIGCONT is received.
+    Models may react to SuspendMsg to save state before suspension.
+    """
+    pass
+
+
+@dataclass
+class ResumeMsg(Msg):
+    """Message delivered to the model after the program resumes from suspension."""
+    pass
+
+
+@dataclass
 class ClearScreenMsg(Msg):
     """Message that instructs the renderer to clear the terminal screen."""
     pass
