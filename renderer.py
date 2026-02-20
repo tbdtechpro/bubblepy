@@ -33,6 +33,7 @@ class Renderer:
         self._lines_rendered: int = 0
         self._cursor_hidden: bool = False
         self._alt_screen: bool = False
+        self._print_queue: list[str] = []
 
         self._stop_event = threading.Event()
         self._ticker_thread: Optional[threading.Thread] = None
@@ -98,30 +99,59 @@ class Renderer:
         with self._lock:
             self._pending_view = view
 
-    def _flush(self) -> None:
-        """Write the pending view to the terminal if it differs from the last frame.
+    def print_line(self, line: str) -> None:
+        """Schedule a line to be printed above the TUI on the next flush.
 
-        Acquires the lock for both the state check and the terminal write so
-        that concurrent calls from the ticker thread and stop() cannot
-        interleave their output.
+        Lines appear above the managed TUI area and scroll into the terminal's
+        scrollback buffer, persisting across re-renders.  In alt-screen mode
+        this is a no-op (no scrollback exists in the alternate screen).
+        """
+        if self._alt_screen:
+            return
+        with self._lock:
+            self._print_queue.append(line)
+
+    def _flush(self) -> None:
+        """Write pending print lines and the current view to the terminal.
+
+        Print lines are output first (above the TUI); each becomes part of
+        the terminal's scrollback buffer.  The TUI is then redrawn below
+        them.  If neither prints nor a view change are pending, returns
+        immediately.
         """
         with self._lock:
-            if self._pending_view is None or self._pending_view == self._last_render:
-                return
+            pending_prints = self._print_queue[:]
+            self._print_queue.clear()
 
             view = self._pending_view
+            view_changed = view is not None and view != self._last_render
 
-            # Erase the previous render.
+            if not pending_prints and not view_changed:
+                return
+
+            # Use the latest view; fall back to the last rendered frame
+            # so that we can still output print lines even when the view
+            # itself has not changed.
+            if view is None:
+                view = self._last_render
+
+            # Erase the previous TUI render.
             if self._lines_rendered > 0:
                 self.output.write("\x1b[A\x1b[2K" * self._lines_rendered)
             else:
                 self.output.write("\r\x1b[2K")
 
+            # Write print lines above the TUI.  Each scrolls into history.
+            for line in pending_prints:
+                self.output.write(line + "\r\n")
+
+            # Write the TUI view.
             self.output.write(view)
             self.output.flush()
 
             self._lines_rendered = view.count("\n")
-            self._last_render = view
+            if view_changed:
+                self._last_render = view
 
     def _ticker_loop(self) -> None:
         """Sleep for one frame interval then flush.  Repeat until stopped."""
@@ -217,6 +247,9 @@ class NullRenderer(Renderer):
         pass
 
     def render(self, view: str) -> None:
+        pass
+
+    def print_line(self, line: str) -> None:
         pass
 
     def _flush(self) -> None:

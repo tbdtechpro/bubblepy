@@ -59,6 +59,17 @@ class QuitMsg(Msg):
 
 
 @dataclass
+class InterruptMsg(Msg):
+    """Message sent when the program receives SIGINT (ctrl+c).
+
+    Unlike QuitMsg, InterruptMsg is delivered to the model's update() method
+    before the program exits, giving it a chance to react (e.g. save state).
+    The event loop then breaks and run() raises ErrInterrupted.
+    """
+    pass
+
+
+@dataclass
 class CustomMsg(Msg):
     """Wrapper for custom user-defined messages."""
     value: Any

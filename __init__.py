@@ -5,7 +5,7 @@ Ported from the Go library: https://github.com/charmbracelet/bubbletea
 """
 
 from .model import Model
-from .tea import Program
+from .tea import Program, ErrInterrupted, ErrProgramKilled, ErrProgramPanic
 from .messages import (
     Msg,
     KeyMsg,
@@ -14,6 +14,7 @@ from .messages import (
     FocusMsg,
     BlurMsg,
     QuitMsg,
+    InterruptMsg,
     ClearScreenMsg,
     SetWindowTitleMsg,
     SuspendMsg,
@@ -56,6 +57,7 @@ __all__ = [
     "FocusMsg",
     "BlurMsg",
     "QuitMsg",
+    "InterruptMsg",
     "ClearScreenMsg",
     "SetWindowTitleMsg",
     "SuspendMsg",
@@ -87,6 +89,10 @@ __all__ = [
     "show_cursor",
     "hide_cursor",
     "suspend",
+    # Exceptions
+    "ErrInterrupted",
+    "ErrProgramKilled",
+    "ErrProgramPanic",
     # Version
     "__version__",
 ]

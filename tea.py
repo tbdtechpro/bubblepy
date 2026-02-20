@@ -13,10 +13,24 @@ from threading import Thread, Event
 from .model import Model
 from .messages import (
     Msg, KeyMsg, MouseMsg, WindowSizeMsg,
-    QuitMsg, FocusMsg, BlurMsg,
+    QuitMsg, InterruptMsg, FocusMsg, BlurMsg,
     ClearScreenMsg, SetWindowTitleMsg,
     SuspendMsg, ResumeMsg,
 )
+
+
+# ── Sentinel exceptions returned / raised by Program.run() ──────────────────
+
+class ErrInterrupted(Exception):
+    """Raised by Program.run() when the program exits via SIGINT / ctrl+c."""
+
+
+class ErrProgramKilled(Exception):
+    """Raised by Program.run() when the program exits via Program.kill()."""
+
+
+class ErrProgramPanic(Exception):
+    """Raised by Program.run() when the model or a command raises an unhandled exception."""
 from .keys import parse_key
 from .mouse import parse_mouse_event
 from .renderer import Renderer, NullRenderer
@@ -72,10 +86,12 @@ class Program:
         self._msg_queue: Queue[Msg] = Queue()
         self._quit = Event()
         self._killed = Event()
+        self._interrupted = Event()
         self._done = Event()
         self._running = False
         self._old_termios: Optional[list] = None
         self._input_thread: Optional[Thread] = None
+        self._panic: Optional[BaseException] = None
     
     def run(self) -> Model:
         """
@@ -85,27 +101,41 @@ class Program:
             The final model state
         """
         self._running = True
-        
+
         try:
             self._setup_terminal()
             self._renderer.start()  # begin FPS-capped render ticker
             self._setup_signals()
-            
+
             # Initialize model and queue the initial render.
-            cmd = self.model.init()
+            try:
+                cmd = self.model.init()
+            except Exception as exc:
+                raise ErrProgramPanic("model.init() raised an exception") from exc
             if cmd is not None:
                 self._execute_cmd(cmd)
             self._render()
 
             # Start input reader thread
             self._start_input_reader()
-            
-            # Main event loop
-            self._event_loop()
-            
+
+            # Main event loop — wrapped so the terminal is always restored.
+            try:
+                self._event_loop()
+            except Exception as exc:
+                raise ErrProgramPanic("unhandled exception in event loop") from exc
+
         finally:
             self._cleanup()
             self._done.set()
+
+        # Surface typed exit conditions after terminal is restored.
+        if self._panic is not None:
+            raise ErrProgramPanic("unhandled exception in command") from self._panic
+        if self._killed.is_set():
+            raise ErrProgramKilled("program was killed")
+        if self._interrupted.is_set():
+            raise ErrInterrupted("program was interrupted")
 
         return self.model
     
@@ -137,6 +167,24 @@ class Program:
     def send(self, msg: Msg) -> None:
         """Send a message to the program."""
         self._msg_queue.put(msg)
+
+    def println(self, *args: object) -> None:
+        """Print a line above the TUI, persisting across re-renders.
+
+        Joins args with spaces, exactly like Python's built-in print().
+        The line scrolls into the terminal's scrollback buffer and is never
+        erased by subsequent TUI updates.  A no-op in alt-screen mode.
+        Equivalent to Go's Program.Println().
+        """
+        self._renderer.print_line(" ".join(str(a) for a in args))
+
+    def printf(self, fmt_str: str, *args: object) -> None:
+        """Print a formatted line above the TUI, persisting across re-renders.
+
+        Formats the string with % formatting when args are provided,
+        otherwise uses fmt_str as-is.  Equivalent to Go's Program.Printf().
+        """
+        self._renderer.print_line(fmt_str % args if args else fmt_str)
     
     def _event_loop(self) -> None:
         """Main event loop."""
@@ -153,6 +201,13 @@ class Program:
 
             # Graceful quit via QuitMsg.
             if isinstance(msg, QuitMsg):
+                break
+
+            # ctrl+c / SIGINT: let the model react, then exit.
+            if isinstance(msg, InterruptMsg):
+                self.model, _ = self.model.update(msg)
+                self._render()
+                self._interrupted.set()
                 break
 
             # Concurrent command execution — do not pass to update().
@@ -219,14 +274,20 @@ class Program:
         self._execute_cmd_async(cmd)
 
     def _execute_cmd_async(self, cmd: Cmd) -> None:
-        """Run a single command in a daemon thread and enqueue its result."""
+        """Run a single command in a daemon thread and enqueue its result.
+
+        If the command raises an unhandled exception the error is stored in
+        self._panic and a QuitMsg is queued so the event loop exits cleanly.
+        run() will then re-raise it as ErrProgramPanic after terminal cleanup.
+        """
         def run() -> None:
             try:
                 result = cmd()
                 if result is not None:
                     self._msg_queue.put(result)
-            except Exception:
-                pass
+            except Exception as exc:
+                self._panic = exc
+                self._msg_queue.put(QuitMsg())
 
         thread = Thread(target=run, daemon=True)
         thread.start()
@@ -323,10 +384,16 @@ class Program:
             except OSError:
                 pass
 
+        def handle_int(signum: int, frame: Any) -> None:
+            # Send InterruptMsg so the model sees it; the event loop will
+            # then break and run() raises ErrInterrupted.
+            self._msg_queue.put(InterruptMsg())
+
         def handle_term(signum: int, frame: Any) -> None:
             self._msg_queue.put(QuitMsg())
 
         signal.signal(signal.SIGWINCH, handle_resize)
+        signal.signal(signal.SIGINT, handle_int)
         signal.signal(signal.SIGTERM, handle_term)
 
     def _suspend(self) -> None:

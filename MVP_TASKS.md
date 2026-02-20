@@ -74,30 +74,37 @@ These are bugs or missing wiring in the current implementation that affect corre
     restored — equivalent to Go's `Program.Wait()`.
   - File: `tea.py`
 
-- [ ] **Add `Program.println()` / `Program.printf()` to print above the TUI**
-  - Go's `Program.Println()` / `Program.Printf()` inject a `printLineMessage` that the
-    renderer outputs above the managed TUI area, persisting across re-renders.
-  - Add equivalents that enqueue a print message handled before the next frame.
-  - Files: `tea.py`, `renderer.py`
+- [x] **Add `Program.println()` / `Program.printf()` to print above the TUI**
+  - `Renderer.print_line(line)` appends to a locked `_print_queue`.  On each `_flush()`,
+    pending print lines are output above the TUI (they scroll into terminal history), then
+    the TUI is redrawn.  A no-op in alt-screen mode (no scrollback exists).
+  - `Program.println(*args)` joins args with spaces; `printf(fmt, *args)` uses `%`
+    formatting — both delegate to `renderer.print_line()`.
+  - `NullRenderer.print_line()` is a no-op.
+  - Files: `renderer.py`, `tea.py`
 
-- [ ] **Add `InterruptMsg` and wire ctrl+c as interrupt, not quit**
-  - Go distinguishes `InterruptMsg` (SIGINT / ctrl+c) from `QuitMsg`.
-  - Add `InterruptMsg` dataclass to `messages.py`; handle SIGINT in `_setup_signals()`
-    by sending `InterruptMsg`; handle `InterruptMsg` in `_event_loop()` to break and set
-    an interrupted flag on `run()`'s return.
-  - Export from `__init__.py`.
+- [x] **Add `InterruptMsg` and wire ctrl+c as interrupt, not quit**
+  - `InterruptMsg` dataclass added to `messages.py` and exported.
+  - `_setup_signals()` registers `handle_int()` for `SIGINT`; it enqueues `InterruptMsg`
+    instead of `QuitMsg`, so the model gets to react before the program exits.
+  - The event loop delivers `InterruptMsg` to `model.update()`, then sets `_interrupted`
+    and breaks.  `run()` raises `ErrInterrupted` after terminal cleanup.
   - Files: `messages.py`, `tea.py`, `__init__.py`
 
-- [ ] **Add error return types: `ErrProgramKilled`, `ErrProgramPanic`, `ErrInterrupted`**
-  - Go's `Program.Run()` returns typed sentinel errors so callers can distinguish graceful
-    quit from kill, interrupt, or panic.
-  - Define Python equivalents as exception subclasses; raise appropriately from `run()`.
-  - File: `tea.py`
+- [x] **Add error return types: `ErrProgramKilled`, `ErrProgramPanic`, `ErrInterrupted`**
+  - Three `Exception` subclasses defined in `tea.py` and exported from `__init__.py`:
+    - `ErrInterrupted` — SIGINT / ctrl+c exit.
+    - `ErrProgramKilled` — `Program.kill()` exit.
+    - `ErrProgramPanic` — unhandled exception in model or command.
+  - `run()` raises the appropriate exception after `_cleanup()` completes.
+  - Files: `tea.py`, `__init__.py`
 
-- [ ] **Add exception recovery**
-  - Wrap `_event_loop()` and `_execute_cmd_async()` in `try/except Exception` blocks that
-    call `_cleanup()` before re-raising, ensuring the terminal is always restored even on
-    unexpected errors.
+- [x] **Add exception recovery**
+  - `_execute_cmd_async()`: exceptions in commands are caught; stored in `self._panic`
+    and a `QuitMsg` is queued so the event loop exits cleanly.  `run()` re-raises as
+    `ErrProgramPanic` after terminal cleanup.
+  - `run()`: wraps `model.init()` and `_event_loop()` in `try/except` blocks to ensure
+    `_cleanup()` runs before any exception propagates.
   - File: `tea.py`
 
 ---
