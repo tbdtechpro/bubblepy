@@ -1,18 +1,39 @@
 """Commands for Bubble Tea."""
 
-from typing import Callable, Optional, List, Any, Union
-from dataclasses import dataclass
-from .messages import Msg, QuitMsg, CustomMsg
+import time
+from dataclasses import dataclass, field
+from typing import Callable, Optional
+
+from .messages import Msg, QuitMsg, ClearScreenMsg, SetWindowTitleMsg
 
 
-# A Cmd is a callable that returns an optional Msg
+# A Cmd is a callable that returns an optional Msg.
 Cmd = Callable[[], Optional[Msg]]
 
 
-def quit_cmd() -> Msg:
+@dataclass
+class BatchMsg(Msg):
+    """Message carrying commands to be executed concurrently.
+
+    Returned by batch(). The program launches each command in its own
+    thread and delivers every resulting message independently to update().
     """
-    Command to quit the program.
-    
+    cmds: list  # list[Cmd]
+
+
+@dataclass
+class SequenceMsg(Msg):
+    """Message carrying commands to be executed sequentially.
+
+    Returned by sequence(). The program runs each command in order,
+    delivering each resulting message to update() before starting the next.
+    """
+    cmds: list  # list[Cmd]
+
+
+def quit_cmd() -> Msg:
+    """Command to quit the program.
+
     Usage:
         return model, quit_cmd
     """
@@ -20,130 +41,138 @@ def quit_cmd() -> Msg:
 
 
 def batch(*cmds: Optional[Cmd]) -> Optional[Cmd]:
-    """
-    Combine multiple commands into one.
-    Commands will be executed concurrently.
-    
+    """Combine multiple commands into one that runs them concurrently.
+
+    Each command runs in its own thread. All resulting messages are
+    delivered to update() independently, with no ordering guarantees.
+    None commands are silently ignored.
+
+    If no valid commands are provided, returns None.
+    If exactly one valid command is provided, returns it directly.
+
     Args:
-        *cmds: Commands to batch together
-        
+        *cmds: Commands to run concurrently.
+
     Returns:
-        A single command that runs all given commands
+        A single command whose message triggers concurrent execution,
+        or None if there are no valid commands.
     """
     valid_cmds = [c for c in cmds if c is not None]
-    
+
     if not valid_cmds:
         return None
-    
+
     if len(valid_cmds) == 1:
         return valid_cmds[0]
-    
-    def batched() -> Optional[Msg]:
-        # Return first message, others will be handled by program
-        for cmd in valid_cmds:
-            result = cmd()
-            if result is not None:
-                return result
-        return None
-    
-    # Store all commands for the program to execute
-    batched._batch_cmds = valid_cmds  # type: ignore
+
+    def batched() -> Msg:
+        return BatchMsg(cmds=valid_cmds)
+
     return batched
 
 
 def sequence(*cmds: Optional[Cmd]) -> Optional[Cmd]:
-    """
-    Run commands in sequence, one after another.
-    
+    """Run commands one at a time, in order.
+
+    Each command runs to completion and its message is delivered to
+    update() before the next command starts. Contrast with batch(),
+    which runs all commands concurrently.
+
+    None commands are silently skipped. If a command returns None, the
+    next command starts immediately without an update() call.
+
+    If no valid commands are provided, returns None.
+    If exactly one valid command is provided, returns it directly.
+
     Args:
-        *cmds: Commands to run sequentially
-        
+        *cmds: Commands to run sequentially.
+
     Returns:
-        A single command that runs commands in order
+        A single command whose message triggers sequential execution,
+        or None if there are no valid commands.
     """
     valid_cmds = [c for c in cmds if c is not None]
-    
+
     if not valid_cmds:
         return None
-    
-    def sequenced() -> Optional[Msg]:
-        for cmd in valid_cmds:
-            result = cmd()
-            if result is not None:
-                return result
-        return None
-    
-    sequenced._sequence_cmds = valid_cmds  # type: ignore
+
+    if len(valid_cmds) == 1:
+        return valid_cmds[0]
+
+    def sequenced() -> Msg:
+        return SequenceMsg(cmds=valid_cmds)
+
     return sequenced
 
 
 def set_window_title(title: str) -> Cmd:
-    """
-    Command to set the terminal window title.
-    
+    """Command to set the terminal window title.
+
     Args:
-        title: The window title
-        
+        title: The window title to display.
+
     Returns:
-        A command that sets the window title
+        A command that sets the window title.
     """
-    @dataclass
-    class WindowTitleMsg(Msg):
-        title: str
-    
     def cmd() -> Msg:
-        return WindowTitleMsg(title=title)
-    
+        return SetWindowTitleMsg(title=title)
+
     return cmd
 
 
 def clear_screen() -> Cmd:
-    """
-    Command to clear the screen.
-    
+    """Command to clear the terminal screen.
+
     Returns:
-        A command that clears the terminal screen
+        A command that clears the screen.
     """
-    @dataclass
-    class ClearScreenMsg(Msg):
-        pass
-    
     def cmd() -> Msg:
         return ClearScreenMsg()
-    
+
     return cmd
 
 
 def tick(duration_seconds: float, fn: Callable[[], Msg]) -> Cmd:
-    """
-    Command to send a message after a delay.
-    
+    """Command that sends a message after a one-time delay.
+
     Args:
-        duration_seconds: Delay in seconds
-        fn: Function that returns the message to send
-        
+        duration_seconds: How long to wait before sending the message.
+        fn: Called after the delay to produce the message.
+
     Returns:
-        A command that sends a message after the delay
+        A command that waits, then returns fn().
     """
-    import time
-    
     def cmd() -> Optional[Msg]:
         time.sleep(duration_seconds)
         return fn()
-    
+
     return cmd
 
 
 def every(interval_seconds: float, fn: Callable[[], Msg]) -> Cmd:
-    """
-    Command to repeatedly send a message at an interval.
-    
-    Note: This is meant to be called once and will keep running.
-    
+    """Command that fires once after an interval, delivering fn() to update().
+
+    Following the Elm Architecture pattern, every() fires once per call.
+    To keep receiving ticks, return every() again from update() each time
+    a tick message is received:
+
+        def update(self, msg):
+            if isinstance(msg, TickMsg):
+                return self, every(1.0, lambda: TickMsg())
+            return self, None
+
+        def init(self):
+            return every(1.0, lambda: TickMsg())
+
     Args:
-        interval_seconds: Interval in seconds
-        fn: Function that returns the message to send
+        interval_seconds: How long to wait before firing.
+        fn: Called after the interval to produce the message.
+
+    Returns:
+        A command that waits for the interval, then returns fn().
     """
-    # This is a placeholder - actual implementation would need
-    # to be integrated with the event loop
-    return tick(interval_seconds, fn)
+    def cmd() -> Optional[Msg]:
+        time.sleep(interval_seconds)
+        return fn()
+
+    return cmd

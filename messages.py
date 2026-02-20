@@ -62,3 +62,15 @@ class QuitMsg(Msg):
 class CustomMsg(Msg):
     """Wrapper for custom user-defined messages."""
     value: Any
+
+
+@dataclass
+class ClearScreenMsg(Msg):
+    """Message that instructs the renderer to clear the terminal screen."""
+    pass
+
+
+@dataclass
+class SetWindowTitleMsg(Msg):
+    """Message that sets the terminal window title."""
+    title: str

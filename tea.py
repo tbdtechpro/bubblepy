@@ -12,13 +12,14 @@ from threading import Thread, Event
 
 from .model import Model
 from .messages import (
-    Msg, KeyMsg, MouseMsg, WindowSizeMsg, 
-    QuitMsg, FocusMsg, BlurMsg
+    Msg, KeyMsg, MouseMsg, WindowSizeMsg,
+    QuitMsg, FocusMsg, BlurMsg,
+    ClearScreenMsg, SetWindowTitleMsg,
 )
 from .keys import parse_key
 from .mouse import parse_mouse_event
 from .renderer import Renderer, NullRenderer
-from .commands import Cmd
+from .commands import Cmd, BatchMsg, SequenceMsg
 from .screen import (
     EnterAltScreenMsg, ExitAltScreenMsg,
     EnableMouseCellMotionMsg, EnableMouseAllMotionMsg, DisableMouseMsg,
@@ -122,12 +123,22 @@ class Program:
                 msg = self._msg_queue.get(timeout=0.1)
             except Empty:
                 continue
-            
-            # Handle special messages
+
+            # Lifecycle
             if isinstance(msg, QuitMsg):
                 break
-            
-            # Handle screen control messages
+
+            # Concurrent command execution — do not pass to update().
+            if isinstance(msg, BatchMsg):
+                self._execute_batch_cmds(msg.cmds)
+                continue
+
+            # Sequential command execution — do not pass to update().
+            if isinstance(msg, SequenceMsg):
+                self._start_sequence(msg.cmds)
+                continue
+
+            # Screen / renderer control messages — do not pass to update().
             if isinstance(msg, EnterAltScreenMsg):
                 self._renderer.enter_alt_screen()
                 continue
@@ -149,15 +160,19 @@ class Program:
             elif isinstance(msg, HideCursorMsg):
                 self._renderer.hide_cursor()
                 continue
-            
-            # Update model
+            elif isinstance(msg, ClearScreenMsg):
+                self._renderer.clear()
+                continue
+            elif isinstance(msg, SetWindowTitleMsg):
+                self._renderer.set_window_title(msg.title)
+                continue
+
+            # Hand the message to the model.
             self.model, cmd = self.model.update(msg)
-            
-            # Execute command if any
+
             if cmd is not None:
                 self._execute_cmd(cmd)
-            
-            # Render
+
             self._render()
     
     def _render(self) -> None:
@@ -166,35 +181,55 @@ class Program:
         self._renderer.render(view)
     
     def _execute_cmd(self, cmd: Cmd) -> None:
-        """Execute a command."""
-        # Handle batch commands
-        if hasattr(cmd, '_batch_cmds'):
-            for c in cmd._batch_cmds:  # type: ignore
-                self._execute_cmd_async(c)
-            return
-        
-        # Handle sequence commands
-        if hasattr(cmd, '_sequence_cmds'):
-            for c in cmd._sequence_cmds:  # type: ignore
-                result = c()
-                if result is not None:
-                    self._msg_queue.put(result)
-            return
-        
-        # Single command - execute in thread to not block
+        """Execute a command in a background thread.
+
+        The command may return any Msg, including BatchMsg or SequenceMsg,
+        which the event loop will dispatch appropriately.
+        """
         self._execute_cmd_async(cmd)
-    
+
     def _execute_cmd_async(self, cmd: Cmd) -> None:
-        """Execute a command asynchronously."""
-        def run():
+        """Run a single command in a daemon thread and enqueue its result."""
+        def run() -> None:
             try:
                 result = cmd()
                 if result is not None:
                     self._msg_queue.put(result)
-            except Exception as e:
-                # Log or handle error
+            except Exception:
                 pass
-        
+
+        thread = Thread(target=run, daemon=True)
+        thread.start()
+
+    def _execute_batch_cmds(self, cmds: list) -> None:
+        """Launch each command concurrently in its own daemon thread.
+
+        All resulting messages are delivered independently to the event loop;
+        there are no ordering guarantees between them.
+        """
+        for cmd in cmds:
+            if cmd is not None:
+                self._execute_cmd_async(cmd)
+
+    def _start_sequence(self, cmds: list) -> None:
+        """Run commands sequentially in a single daemon thread.
+
+        Each command runs to completion and its message (if any) is placed
+        on the queue before the next command starts.  BatchMsg or SequenceMsg
+        returned by a step are placed on the queue for the event loop to
+        dispatch — nesting is supported.
+        """
+        def run() -> None:
+            for cmd in cmds:
+                if cmd is None:
+                    continue
+                try:
+                    msg = cmd()
+                except Exception:
+                    return
+                if msg is not None:
+                    self._msg_queue.put(msg)
+
         thread = Thread(target=run, daemon=True)
         thread.start()
     
