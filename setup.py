@@ -1,7 +1,8 @@
 """Setup file for Bubble Tea Python port."""
 
-from setuptools import setup, find_packages
 import os
+
+from setuptools import find_packages, setup
 
 # Read README for long description
 here = os.path.abspath(os.path.dirname(__file__))
@@ -11,22 +12,19 @@ with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
 setup(
     name="bubbletea",
     version="0.1.0",
-    description="A Python TUI framework based on The Elm Architecture — port of the Go Bubble Tea library",
+    description="A Python TUI framework based on The Elm Architecture (port of Go Bubble Tea)",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/charmbracelet/bubbletea",
     author="Charm",
     author_email="vt100@charm.sh",
     license="MIT",
-
     # Package configuration
     packages=find_packages(exclude=["tests", "tests.*", "examples"]),
     py_modules=["bubbletea"],
     python_requires=">=3.10",
-
     # No external dependencies for core functionality
     install_requires=[],
-
     # Optional dependencies
     extras_require={
         "dev": [
@@ -38,14 +36,12 @@ setup(
             "flake8",
         ],
     },
-
     # Entry points (if you want CLI commands)
     entry_points={
         "console_scripts": [
             # "bubbletea-example=examples.basics:main",
         ],
     },
-
     # Classifiers for PyPI
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -63,7 +59,6 @@ setup(
         "Topic :: Terminals",
         "Typing :: Typed",
     ],
-
     # Keywords for discoverability
     keywords=[
         "tui",
@@ -75,12 +70,10 @@ setup(
         "charm",
         "user-interface",
     ],
-
     # Include type hints
     package_data={
         "bubbletea": ["py.typed"],
     },
-
     # Project URLs
     project_urls={
         "Bug Reports": "https://github.com/charmbracelet/bubbletea/issues",

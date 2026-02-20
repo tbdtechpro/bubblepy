@@ -1,26 +1,50 @@
 """Core Program class for Bubble Tea."""
 
 import os
-import sys
 import select
 import signal
+import sys
 import termios
 import tty
-from typing import Optional, TextIO, Callable, Any
-from queue import Queue, Empty
-from threading import Thread, Event
+from queue import Empty, Queue
+from threading import Event, Thread
+from typing import Any, Callable, Optional, TextIO
 
-from .model import Model
+from .commands import BatchMsg, Cmd, SequenceMsg
+from .exec import ExecMsg
+from .keys import parse_key
 from .messages import (
-    Msg, KeyMsg, MouseMsg, WindowSizeMsg,
-    QuitMsg, InterruptMsg, FocusMsg, BlurMsg,
-    ClearScreenMsg, SetWindowTitleMsg,
-    SuspendMsg, ResumeMsg,
-    PasteStartMsg, PasteEndMsg, PasteMsg,
+    BlurMsg,
+    ClearScreenMsg,
+    FocusMsg,
+    InterruptMsg,
+    KeyMsg,
+    MouseMsg,
+    Msg,
+    PasteEndMsg,
+    PasteMsg,
+    PasteStartMsg,
+    QuitMsg,
+    ResumeMsg,
+    SetWindowTitleMsg,
+    SuspendMsg,
+    WindowSizeMsg,
+)
+from .model import Model
+from .mouse import parse_mouse_event
+from .renderer import NullRenderer, Renderer
+from .screen import (
+    DisableMouseMsg,
+    EnableMouseAllMotionMsg,
+    EnableMouseCellMotionMsg,
+    EnterAltScreenMsg,
+    ExitAltScreenMsg,
+    HideCursorMsg,
+    ShowCursorMsg,
 )
 
-
 # ── Sentinel exceptions returned / raised by Program.run() ──────────────────
+
 
 class ErrInterrupted(Exception):
     """Raised by Program.run() when the program exits via SIGINT / ctrl+c."""
@@ -32,25 +56,15 @@ class ErrProgramKilled(Exception):
 
 class ErrProgramPanic(Exception):
     """Raised by Program.run() when the model or a command raises an unhandled exception."""
-from .keys import parse_key
-from .mouse import parse_mouse_event
-from .renderer import Renderer, NullRenderer
-from .commands import Cmd, BatchMsg, SequenceMsg
-from .screen import (
-    EnterAltScreenMsg, ExitAltScreenMsg,
-    EnableMouseCellMotionMsg, EnableMouseAllMotionMsg, DisableMouseMsg,
-    ShowCursorMsg, HideCursorMsg,
-)
-from .exec import ExecMsg
 
 
 class Program:
     """
     A Bubble Tea program.
-    
+
     Creates a new TUI application with the given model.
     """
-    
+
     def __init__(
         self,
         model: Model,
@@ -106,8 +120,7 @@ class Program:
         self._report_focus = report_focus
 
         self._renderer: Renderer = (
-            NullRenderer(self.output, fps) if use_null_renderer
-            else Renderer(self.output, fps)
+            NullRenderer(self.output, fps) if use_null_renderer else Renderer(self.output, fps)
         )
         self._msg_queue: Queue[Msg] = Queue()
         self._quit = Event()
@@ -118,11 +131,11 @@ class Program:
         self._old_termios: Optional[list] = None
         self._input_thread: Optional[Thread] = None
         self._panic: Optional[BaseException] = None
-    
+
     def run(self) -> Model:
         """
         Run the program and block until it exits.
-        
+
         Returns:
             The final model state
         """
@@ -164,7 +177,7 @@ class Program:
             raise ErrInterrupted("program was interrupted")
 
         return self.model
-    
+
     def quit(self) -> None:
         """Signal the program to quit gracefully."""
         self._quit.set()
@@ -219,7 +232,7 @@ class Program:
         otherwise uses fmt_str as-is.  Equivalent to Go's Program.Printf().
         """
         self._renderer.print_line(fmt_str % args if args else fmt_str)
-    
+
     def _event_loop(self) -> None:
         """Main event loop."""
         while not self._quit.is_set():
@@ -308,12 +321,12 @@ class Program:
                 self._execute_cmd(cmd)
 
             self._render()
-    
+
     def _render(self) -> None:
         """Render the current view."""
         view = self.model.view()
         self._renderer.render(view)
-    
+
     def _execute_cmd(self, cmd: Cmd) -> None:
         """Execute a command in a background thread.
 
@@ -329,6 +342,7 @@ class Program:
         self._panic and a QuitMsg is queued so the event loop exits cleanly.
         run() will then re-raise it as ErrProgramPanic after terminal cleanup.
         """
+
         def run() -> None:
             try:
                 result = cmd()
@@ -359,6 +373,7 @@ class Program:
         returned by a step are placed on the queue for the event loop to
         dispatch — nesting is supported.
         """
+
         def run() -> None:
             for cmd in cmds:
                 if cmd is None:
@@ -372,7 +387,7 @@ class Program:
 
         thread = Thread(target=run, daemon=True)
         thread.start()
-    
+
     def _setup_terminal(self) -> None:
         """Set up the terminal for raw mode."""
         # Save current terminal settings
@@ -380,20 +395,20 @@ class Program:
             fd = self.input_tty.fileno()
             self._old_termios = termios.tcgetattr(fd)
             tty.setraw(fd)
-        
+
         # Enter alt screen if requested
         if self._use_alt_screen:
             self._renderer.enter_alt_screen()
-        
+
         # Enable mouse if requested
         if self._mouse_all_motion:
             self._renderer.enable_mouse(all_motion=True)
         elif self._mouse_cell_motion:
             self._renderer.enable_mouse(all_motion=False)
-        
+
         # Hide cursor
         self._renderer.hide_cursor()
-        
+
         # Bracketed paste
         if self._bracketed_paste:
             self.output.write("\x1b[?2004h")
@@ -403,20 +418,20 @@ class Program:
         if self._report_focus:
             self.output.write("\x1b[?1004h")
             self.output.flush()
-    
+
     def _cleanup(self) -> None:
         """Clean up terminal state."""
         self._quit.set()
-        
+
         # Wait for input thread
         if self._input_thread and self._input_thread.is_alive():
             self._input_thread.join(timeout=0.5)
-        
+
         # Restore terminal
         if self._old_termios is not None and self.input_tty.isatty():
             fd = self.input_tty.fileno()
             termios.tcsetattr(fd, termios.TCSADRAIN, self._old_termios)
-        
+
         # Disable bracketed paste
         if self._bracketed_paste:
             self.output.write("\x1b[?2004l")
@@ -426,16 +441,17 @@ class Program:
         if self._report_focus:
             self.output.write("\x1b[?1004l")
             self.output.flush()
-        
+
         # Clean up renderer
         self._renderer.close()
-        
+
         # Print newline for clean exit
         self.output.write("\n")
         self.output.flush()
-    
+
     def _setup_signals(self) -> None:
         """Set up signal handlers."""
+
         def handle_resize(signum: int, frame: Any) -> None:
             try:
                 size = os.get_terminal_size()
@@ -486,9 +502,7 @@ class Program:
             self.output.flush()
 
         if self._old_termios is not None and self.input_tty.isatty():
-            termios.tcsetattr(
-                self.input_tty.fileno(), termios.TCSADRAIN, self._old_termios
-            )
+            termios.tcsetattr(self.input_tty.fileno(), termios.TCSADRAIN, self._old_termios)
 
     def restore_terminal(self) -> None:
         """Reclaim the terminal after release_terminal().
@@ -560,7 +574,7 @@ class Program:
         Only available on Unix.  On platforms without SIGTSTP the method
         returns immediately without doing anything.
         """
-        if not hasattr(signal, 'SIGTSTP'):
+        if not hasattr(signal, "SIGTSTP"):
             return
 
         # 1. Stop the renderer without a final flush and restore the terminal.
@@ -574,9 +588,7 @@ class Program:
             self.output.flush()
 
         if self._old_termios is not None and self.input_tty.isatty():
-            termios.tcsetattr(
-                self.input_tty.fileno(), termios.TCSADRAIN, self._old_termios
-            )
+            termios.tcsetattr(self.input_tty.fileno(), termios.TCSADRAIN, self._old_termios)
 
         # 2. Register SIGCONT handler and suspend.
         sigcont_received = Event()
@@ -616,6 +628,7 @@ class Program:
 
     def _start_input_reader(self) -> None:
         """Start the input reader thread."""
+
         def read_input() -> None:
             try:
                 fd = self.input_tty.fileno()
@@ -630,7 +643,7 @@ class Program:
 
             while not self._quit.is_set():
                 # Use select to avoid blocking
-                if sys.platform != 'win32':
+                if sys.platform != "win32":
                     readable, _, _ = select.select([fd], [], [], 0.1)
                     if not readable:
                         continue
@@ -652,16 +665,16 @@ class Program:
 
                     # Bracketed paste sequences.
                     if self._bracketed_paste:
-                        text = data.decode('utf-8', errors='replace')
-                        if '\x1b[200~' in text:
+                        text = data.decode("utf-8", errors="replace")
+                        if "\x1b[200~" in text:
                             # Paste start: emit PasteStartMsg and buffer
                             # everything after the marker.
                             in_paste = True
                             paste_buf.clear()
                             self._msg_queue.put(PasteStartMsg())
-                            after = text.split('\x1b[200~', 1)[1]
-                            if '\x1b[201~' in after:
-                                content, _ = after.split('\x1b[201~', 1)
+                            after = text.split("\x1b[200~", 1)[1]
+                            if "\x1b[201~" in after:
+                                content, _ = after.split("\x1b[201~", 1)
                                 paste_buf.append(content)
                                 self._msg_queue.put(PasteEndMsg())
                                 self._msg_queue.put(PasteMsg("".join(paste_buf)))
@@ -671,9 +684,9 @@ class Program:
                                 paste_buf.append(after)
                             continue
                         if in_paste:
-                            text = data.decode('utf-8', errors='replace')
-                            if '\x1b[201~' in text:
-                                content, _ = text.split('\x1b[201~', 1)
+                            text = data.decode("utf-8", errors="replace")
+                            if "\x1b[201~" in text:
+                                content, _ = text.split("\x1b[201~", 1)
                                 paste_buf.append(content)
                                 self._msg_queue.put(PasteEndMsg())
                                 self._msg_queue.put(PasteMsg("".join(paste_buf)))
@@ -686,15 +699,17 @@ class Program:
                     # Try to parse as mouse event first
                     mouse_event = parse_mouse_event(data)
                     if mouse_event:
-                        self._msg_queue.put(MouseMsg(
-                            x=mouse_event.x,
-                            y=mouse_event.y,
-                            button=mouse_event.button.value,
-                            action=mouse_event.action.name.lower(),
-                            alt=mouse_event.alt,
-                            ctrl=mouse_event.ctrl,
-                            shift=mouse_event.shift,
-                        ))
+                        self._msg_queue.put(
+                            MouseMsg(
+                                x=mouse_event.x,
+                                y=mouse_event.y,
+                                button=mouse_event.button.value,
+                                action=mouse_event.action.name.lower(),
+                                alt=mouse_event.alt,
+                                ctrl=mouse_event.ctrl,
+                                shift=mouse_event.shift,
+                            )
+                        )
                         continue
 
                     # Parse as key
@@ -712,20 +727,26 @@ class Program:
 # Convenience functions for creating programs with options
 def with_alt_screen() -> Callable[[Program], None]:
     """Option to use alternate screen buffer."""
+
     def option(p: Program) -> None:
         p._use_alt_screen = True
+
     return option
 
 
 def with_mouse_cell_motion() -> Callable[[Program], None]:
     """Option to enable mouse cell motion tracking."""
+
     def option(p: Program) -> None:
         p._mouse_cell_motion = True
+
     return option
 
 
 def with_mouse_all_motion() -> Callable[[Program], None]:
     """Option to enable mouse all motion tracking."""
+
     def option(p: Program) -> None:
         p._mouse_all_motion = True
+
     return option

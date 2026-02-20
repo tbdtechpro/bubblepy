@@ -2,12 +2,8 @@
 
 import io
 import time
-import threading
 
-import pytest
-
-from bubbletea.renderer import Renderer, NullRenderer
-
+from bubbletea.renderer import NullRenderer, Renderer
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 

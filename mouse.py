@@ -1,12 +1,13 @@
 """Mouse handling for Bubble Tea."""
 
-from enum import Enum, auto
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from enum import Enum, auto
+from typing import Optional
 
 
 class MouseButton(Enum):
     """Mouse button types."""
+
     NONE = auto()
     LEFT = auto()
     MIDDLE = auto()
@@ -21,6 +22,7 @@ class MouseButton(Enum):
 
 class MouseAction(Enum):
     """Mouse action types."""
+
     PRESS = auto()
     RELEASE = auto()
     MOTION = auto()
@@ -29,6 +31,7 @@ class MouseAction(Enum):
 @dataclass
 class MouseEvent:
     """Represents a mouse event."""
+
     x: int
     y: int
     button: MouseButton
@@ -67,41 +70,47 @@ def parse_mouse_event(data: bytes) -> Optional[MouseEvent]:
             if btn == 3:
                 # X10 uses button=3 to signal release (no 'm' terminator)
                 return MouseEvent(
-                    x=cx, y=cy,
+                    x=cx,
+                    y=cy,
                     button=MouseButton.NONE,
                     action=MouseAction.RELEASE,
-                    alt=alt, ctrl=ctrl, shift=shift,
+                    alt=alt,
+                    ctrl=ctrl,
+                    shift=shift,
                 )
 
             button = (
-                MouseButton.LEFT if btn == 0
-                else MouseButton.MIDDLE if btn == 1
-                else MouseButton.RIGHT
+                MouseButton.LEFT
+                if btn == 0
+                else MouseButton.MIDDLE if btn == 1 else MouseButton.RIGHT
             )
             return MouseEvent(
-                x=cx, y=cy,
+                x=cx,
+                y=cy,
                 button=button,
                 action=MouseAction.PRESS,
-                alt=alt, ctrl=ctrl, shift=shift,
+                alt=alt,
+                ctrl=ctrl,
+                shift=shift,
             )
 
-        text = data.decode('utf-8', errors='ignore')
+        text = data.decode("utf-8", errors="ignore")
 
         # SGR extended mouse mode: ESC [ < Cb ; Cx ; Cy M/m
-        if text.startswith('\x1b[<'):
+        if text.startswith("\x1b[<"):
             # Remove prefix and find terminator
             rest = text[3:]
 
-            if 'M' in rest:
-                parts, _ = rest.split('M', 1)
+            if "M" in rest:
+                parts, _ = rest.split("M", 1)
                 is_release = False
-            elif 'm' in rest:
-                parts, _ = rest.split('m', 1)
+            elif "m" in rest:
+                parts, _ = rest.split("m", 1)
                 is_release = True
             else:
                 return None
 
-            nums = parts.split(';')
+            nums = parts.split(";")
             if len(nums) != 3:
                 return None
 

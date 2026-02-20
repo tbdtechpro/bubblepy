@@ -21,6 +21,7 @@ import bubbletea as tea
 @dataclass
 class TickMsg:
     """Sent every second to advance the countdown."""
+
     pass
 
 

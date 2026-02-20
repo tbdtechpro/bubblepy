@@ -1,12 +1,9 @@
 """Tests for mouse.py — parse_mouse_event()."""
 
-import pytest
-
 from bubbletea.mouse import (
-    parse_mouse_event,
-    MouseButton,
     MouseAction,
-    MouseEvent,
+    MouseButton,
+    parse_mouse_event,
 )
 
 
@@ -27,7 +24,7 @@ class TestSGRMouseParsing:
         assert ev is not None
         assert ev.button == MouseButton.LEFT
         assert ev.action == MouseAction.PRESS
-        assert ev.x == 9   # 1-based → 0-based
+        assert ev.x == 9  # 1-based → 0-based
         assert ev.y == 4
 
     def test_left_release(self):
@@ -62,12 +59,12 @@ class TestSGRMouseParsing:
         assert ev.action == MouseAction.MOTION
 
     def test_shift_modifier(self):
-        ev = parse_mouse_event(_sgr(4, 1, 1))   # bit 2 = shift
+        ev = parse_mouse_event(_sgr(4, 1, 1))  # bit 2 = shift
         assert ev is not None
         assert ev.shift is True
 
     def test_alt_modifier(self):
-        ev = parse_mouse_event(_sgr(8, 1, 1))   # bit 3 = alt
+        ev = parse_mouse_event(_sgr(8, 1, 1))  # bit 3 = alt
         assert ev is not None
         assert ev.alt is True
 

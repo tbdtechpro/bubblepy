@@ -1,28 +1,24 @@
 """Tests for commands.py."""
 
-import time
 import threading
-from typing import Optional
+import time
 
-import pytest
-
-import bubbletea as tea
 from bubbletea.commands import (
-    batch,
-    sequence,
-    quit_cmd,
-    set_window_title,
-    clear_screen,
-    tick,
-    every,
-    window_size,
     BatchMsg,
     SequenceMsg,
+    batch,
+    clear_screen,
+    every,
+    quit_cmd,
+    sequence,
+    set_window_title,
+    tick,
+    window_size,
 )
 from bubbletea.messages import (
+    ClearScreenMsg,
     QuitMsg,
     SetWindowTitleMsg,
-    ClearScreenMsg,
     WindowSizeMsg,
 )
 
@@ -37,18 +33,26 @@ class TestBatch:
         assert batch(None, None) is None
 
     def test_single_cmd_passthrough(self):
-        cmd = lambda: QuitMsg()
+        def cmd():
+            return QuitMsg()
+
         result = batch(cmd)
         assert result is cmd
 
     def test_filters_none(self):
-        cmd = lambda: QuitMsg()
+        def cmd():
+            return QuitMsg()
+
         result = batch(None, cmd, None)
         assert result is cmd  # single valid cmd → passthrough
 
     def test_multiple_cmds_returns_batch_msg(self):
-        c1 = lambda: QuitMsg()
-        c2 = lambda: QuitMsg()
+        def c1():
+            return QuitMsg()
+
+        def c2():
+            return QuitMsg()
+
         batched = batch(c1, c2)
         assert batched is not None
         msg = batched()
@@ -85,13 +89,19 @@ class TestSequence:
         assert sequence(None, None) is None
 
     def test_single_cmd_passthrough(self):
-        cmd = lambda: QuitMsg()
+        def cmd():
+            return QuitMsg()
+
         result = sequence(cmd)
         assert result is cmd
 
     def test_multiple_returns_sequence_msg(self):
-        c1 = lambda: QuitMsg()
-        c2 = lambda: QuitMsg()
+        def c1():
+            return QuitMsg()
+
+        def c2():
+            return QuitMsg()
+
         seq = sequence(c1, c2)
         assert seq is not None
         msg = seq()
@@ -115,8 +125,6 @@ class TestClearScreen:
 
 class TestTick:
     def test_delays_and_returns_msg(self):
-        sentinel = object()
-
         def make_msg():
             return QuitMsg()
 
@@ -136,7 +144,6 @@ class TestTick:
 
 class TestEvery:
     def test_fires_once(self):
-        results = []
         cmd = every(0.01, lambda: QuitMsg())
         result = cmd()
         assert isinstance(result, QuitMsg)

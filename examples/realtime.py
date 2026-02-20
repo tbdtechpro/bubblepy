@@ -11,10 +11,10 @@ Run:
 """
 
 import os
+import random
 import sys
 import threading
 import time
-import random
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -27,6 +27,7 @@ import bubbletea as tea
 @dataclass
 class ResponseMsg:
     """Represents a response from a simulated background worker."""
+
     duration_ms: int
 
 
@@ -46,7 +47,7 @@ class RealtimeModel(tea.Model):
             return self, tea.quit_cmd
 
         if isinstance(msg, ResponseMsg):
-            self.responses = (self.responses + [msg])[-self.MAX_RESULTS:]
+            self.responses = (self.responses + [msg])[-self.MAX_RESULTS :]
             return self, None
 
         return self, None

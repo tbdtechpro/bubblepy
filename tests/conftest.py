@@ -9,7 +9,6 @@ import pytest
 import bubbletea as tea
 from bubbletea.renderer import NullRenderer
 
-
 # ── Fixtures ────────────────────────────────────────────────────────────────
 
 

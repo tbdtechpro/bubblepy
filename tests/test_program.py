@@ -1,6 +1,5 @@
 """Integration tests for Program lifecycle."""
 
-import io
 import threading
 import time
 from typing import Optional
@@ -10,7 +9,6 @@ import pytest
 import bubbletea as tea
 from bubbletea.renderer import NullRenderer
 from tests.conftest import make_program
-
 
 # ── Minimal models ────────────────────────────────────────────────────────────
 
@@ -77,6 +75,7 @@ class InitCmdModel(tea.Model):
     def init(self) -> Optional[tea.Cmd]:
         def cmd() -> tea.Msg:
             return tea.KeyMsg(key="x")
+
         return cmd
 
     def update(self, msg: tea.Msg):  # type: ignore[override]

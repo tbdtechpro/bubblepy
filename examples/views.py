@@ -15,11 +15,10 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 import bubbletea as tea
-
 
 CHOICES = [
     "Plant carrots",

@@ -1,11 +1,9 @@
 """Screen control sequences for Bubble Tea."""
 
-import sys
 from dataclasses import dataclass
-from typing import Optional
-from .messages import Msg, SuspendMsg
-from .commands import Cmd
 
+from .commands import Cmd
+from .messages import Msg, SuspendMsg
 
 # ANSI escape sequences
 ESC = "\x1b"
@@ -86,50 +84,64 @@ class HideCursorMsg(Msg):
 # Command functions
 def enter_alt_screen() -> Cmd:
     """Command to enter the alternate screen buffer."""
+
     def cmd() -> Msg:
         return EnterAltScreenMsg()
+
     return cmd
 
 
 def exit_alt_screen() -> Cmd:
     """Command to exit the alternate screen buffer."""
+
     def cmd() -> Msg:
         return ExitAltScreenMsg()
+
     return cmd
 
 
 def enable_mouse_cell_motion() -> Cmd:
     """Command to enable mouse cell motion tracking."""
+
     def cmd() -> Msg:
         return EnableMouseCellMotionMsg()
+
     return cmd
 
 
 def enable_mouse_all_motion() -> Cmd:
     """Command to enable mouse all motion tracking."""
+
     def cmd() -> Msg:
         return EnableMouseAllMotionMsg()
+
     return cmd
 
 
 def disable_mouse() -> Cmd:
     """Command to disable mouse tracking."""
+
     def cmd() -> Msg:
         return DisableMouseMsg()
+
     return cmd
 
 
 def show_cursor() -> Cmd:
     """Command to show the cursor."""
+
     def cmd() -> Msg:
         return ShowCursorMsg()
+
     return cmd
 
 
 def hide_cursor() -> Cmd:
     """Command to hide the cursor."""
+
     def cmd() -> Msg:
         return HideCursorMsg()
+
     return cmd
 
 
@@ -140,8 +152,10 @@ def suspend() -> Cmd:
     SIGTSTP to the process, and emitting ResumeMsg when SIGCONT is received.
     Not supported on Windows; the message is silently ignored there.
     """
+
     def cmd() -> Msg:
         return SuspendMsg()
+
     return cmd
 
 

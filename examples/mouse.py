@@ -17,7 +17,6 @@ from typing import Optional
 
 import bubbletea as tea
 
-
 MAX_EVENTS = 20
 
 
@@ -42,10 +41,7 @@ class MouseModel(tea.Model):
             if msg.shift:
                 mods.append("shift")
             mod_str = "+".join(mods) + "+" if mods else ""
-            entry = (
-                f"{mod_str}{msg.action} button={msg.button} "
-                f"x={msg.x} y={msg.y}"
-            )
+            entry = f"{mod_str}{msg.action} button={msg.button} " f"x={msg.x} y={msg.y}"
             self.events = (self.events + [entry])[-MAX_EVENTS:]
 
         return self, None

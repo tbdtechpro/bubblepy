@@ -6,6 +6,7 @@ from typing import Optional
 
 class KeyType(Enum):
     """Special key types."""
+
     # Navigation
     UP = auto()
     DOWN = auto()
@@ -15,7 +16,7 @@ class KeyType(Enum):
     END = auto()
     PAGE_UP = auto()
     PAGE_DOWN = auto()
-    
+
     # Editing
     BACKSPACE = auto()
     DELETE = auto()
@@ -25,7 +26,7 @@ class KeyType(Enum):
     ENTER = auto()
     ESCAPE = auto()
     SPACE = auto()
-    
+
     # Function keys
     F1 = auto()
     F2 = auto()
@@ -39,7 +40,7 @@ class KeyType(Enum):
     F10 = auto()
     F11 = auto()
     F12 = auto()
-    
+
     # Control characters
     CTRL_A = auto()
     CTRL_B = auto()
@@ -67,7 +68,7 @@ class KeyType(Enum):
     CTRL_X = auto()
     CTRL_Y = auto()
     CTRL_Z = auto()
-    
+
     # Misc
     NULL = auto()
     RUNE = auto()  # Regular character
@@ -77,14 +78,13 @@ class KeyType(Enum):
 ESCAPE_SEQUENCES = {
     # Arrow keys
     "\x1b[A": "up",
-    "\x1b[B": "down", 
+    "\x1b[B": "down",
     "\x1b[C": "right",
     "\x1b[D": "left",
     "\x1bOA": "up",
     "\x1bOB": "down",
     "\x1bOC": "right",
     "\x1bOD": "left",
-    
     # Navigation
     "\x1b[H": "home",
     "\x1b[F": "end",
@@ -94,7 +94,6 @@ ESCAPE_SEQUENCES = {
     "\x1b[6~": "pgdown",
     "\x1b[2~": "insert",
     "\x1b[3~": "delete",
-    
     # Function keys
     "\x1bOP": "f1",
     "\x1bOQ": "f2",
@@ -108,7 +107,6 @@ ESCAPE_SEQUENCES = {
     "\x1b[21~": "f10",
     "\x1b[23~": "f11",
     "\x1b[24~": "f12",
-    
     # Special
     "\x1b[Z": "shift+tab",
 }
@@ -124,11 +122,11 @@ CTRL_KEYS = {
     6: "ctrl+f",
     7: "ctrl+g",
     8: "backspace",  # ctrl+h
-    9: "tab",        # ctrl+i
-    10: "enter",     # ctrl+j (newline)
+    9: "tab",  # ctrl+i
+    10: "enter",  # ctrl+j (newline)
     11: "ctrl+k",
     12: "ctrl+l",
-    13: "enter",     # ctrl+m (carriage return)
+    13: "enter",  # ctrl+m (carriage return)
     14: "ctrl+n",
     15: "ctrl+o",
     16: "ctrl+p",
@@ -142,7 +140,7 @@ CTRL_KEYS = {
     24: "ctrl+x",
     25: "ctrl+y",
     26: "ctrl+z",
-    27: "escape",    # ctrl+[
+    27: "escape",  # ctrl+[
     28: "ctrl+\\",
     29: "ctrl+]",
     30: "ctrl+^",
@@ -153,12 +151,12 @@ CTRL_KEYS = {
 
 class Key:
     """Represents a key press."""
-    
+
     def __init__(self, char: str = "", key_type: Optional[KeyType] = None, alt: bool = False):
         self.char = char
         self.type = key_type or KeyType.RUNE
         self.alt = alt
-    
+
     def __str__(self) -> str:
         prefix = "alt+" if self.alt else ""
         if self.type == KeyType.RUNE:
@@ -169,47 +167,47 @@ class Key:
 def parse_key(data: bytes) -> Optional[str]:
     """
     Parse raw input bytes into a key string.
-    
+
     Returns the key name (e.g., "a", "enter", "ctrl+c", "up")
     """
     if not data:
         return None
-    
-    text = data.decode('utf-8', errors='ignore')
-    
+
+    text = data.decode("utf-8", errors="ignore")
+
     # Check for escape sequences first
-    if text.startswith('\x1b'):
+    if text.startswith("\x1b"):
         # Check for alt+key (escape followed by single char)
         if len(text) == 2 and text[1].isprintable():
             return f"alt+{text[1]}"
-        
+
         # Check known escape sequences
         for seq, name in ESCAPE_SEQUENCES.items():
             if text.startswith(seq):
                 return name
-        
+
         # Just escape
         if len(text) == 1:
             return "escape"
-        
+
         return None
-    
+
     # Check for control characters
     if len(text) == 1:
         code = ord(text)
         if code in CTRL_KEYS:
             return CTRL_KEYS[code]
-        
+
         # Space
         if code == 32:
             return " "
-        
+
         # Regular printable character
         if text.isprintable():
             return text
-    
+
     # Multi-byte UTF-8 character
     if len(text) == 1 or (len(data) > 1 and text):
         return text[0] if text else None
-    
+
     return None
