@@ -65,6 +65,22 @@ These are bugs or missing wiring in the current implementation that affect corre
     - Add equivalents that enqueue a print message handled before the next frame.
     - Files: `tea.py`, `renderer.py`
 
+12. **Add `InterruptMsg` and wire ctrl+c as interrupt, not quit**
+    - Go distinguishes `InterruptMsg` (SIGINT / ctrl+c when not in raw mode) from `QuitMsg`. The error `ErrInterrupted` is returned when the program exits via interrupt.
+    - Add `InterruptMsg` dataclass to `messages.py`; handle SIGINT in `_setup_signals()` by sending `InterruptMsg`; handle `InterruptMsg` in `_event_loop()` to break and set an interrupted flag on `run()`'s return.
+    - Export from `__init__.py`.
+    - Files: `messages.py`, `tea.py`, `__init__.py`
+
+13. **Add error return types: `ErrProgramKilled`, `ErrProgramPanic`, `ErrInterrupted`**
+    - Go's `Program.Run()` returns typed sentinel errors so callers can distinguish graceful quit from kill, interrupt, or panic.
+    - Define Python equivalents as exception subclasses or sentinel exception instances; raise or return appropriately from `Program.run()`.
+    - File: `tea.py`
+
+14. **Add panic / exception recovery**
+    - Go recovers from panics in commands and the event loop, restores the terminal, then re-raises.
+    - Wrap the `_event_loop()` and `_execute_cmd_async()` in `try/except Exception` blocks that call `_cleanup()` before re-raising, ensuring the terminal is always restored even on unexpected errors.
+    - File: `tea.py`
+
 ---
 
 ## 2. Missing Features
@@ -112,12 +128,42 @@ Features present in the Go library that have no Python equivalent.
     - Add a public method that sends `WindowTitleMsg` through the message queue.
     - File: `tea.py`
 
-20. **Add bracketed paste support**
+20. **Add `WindowSize()` command for explicit terminal size query**
+    - Go provides a `WindowSize()` command that returns a `WindowSizeMsg` with the current dimensions, usable from `Init()` or `Update()` without waiting for a resize event.
+    - Implement using `os.get_terminal_size()` wrapped in a `Cmd`.
+    - Files: `commands.py`, `__init__.py`
+
+21. **Add X10 legacy mouse protocol support**
+    - Python's `mouse.py` only parses SGR extended mouse events. Terminals that don't support SGR fall back to the X10 protocol (byte-encoded, max coordinate 223).
+    - Add an X10 parser alongside the existing SGR parser in `parse_mouse_event()`.
+    - File: `mouse.py`
+
+22. **Add thread safety to `Renderer`**
+    - The Python `Renderer` is called from the main thread and potentially from `Program.println()` messages; `_last_render` and `_lines_rendered` are mutated without locks.
+    - Add a `threading.Lock` around all state mutations and the write path.
+    - File: `renderer.py`
+
+23. **Add renderer lifecycle methods (`start()`, `stop()`, `kill()`) and state queries**
+    - Go's renderer interface has `start()`, `stop()`, `kill()`, `repaint()`, `altScreen() bool`, `bracketedPasteActive() bool`, `reportFocus() bool`.
+    - Add these to `Renderer` and `NullRenderer`; `start()`/`stop()` manage the FPS ticker thread (once task 6 lands); state queries return current flags.
+    - File: `renderer.py`
+
+24. **Add bracketed paste support**
     - Go supports `WithoutBracketedPaste()` (it's on by default) and emits `PasteMsg` / `PasteStartMsg` / `PasteEndMsg`.
     - Add `PasteMsg`, `PasteStartMsg`, `PasteEndMsg` dataclasses to `messages.py`.
     - Parse bracketed paste sequences (`\x1b[200~`...`\x1b[201~`) in the input reader when `bracketed_paste=True`.
     - Export from `__init__.py`.
     - Files: `messages.py`, `tea.py`, `__init__.py`
+
+25. **Fix `setup.py` and `pyproject.toml` placeholder values**
+    - Author name, email, and repository URLs still contain `"Your Name"`, `"your.email@example.com"`, and `"your-repo"`.
+    - Replace with actual project metadata. Until the canonical repo URL is decided, use the upstream `charmbracelet/bubbletea` reference with a note.
+    - Files: `setup.py`, `pyproject.toml`
+
+26. **Add `CHANGELOG.md`**
+    - Track version history from `0.1.0` onwards so users and tools can follow breaking changes.
+    - Follow [Keep a Changelog](https://keepachangelog.com) format.
+    - File: `CHANGELOG.md` (new)
 
 ---
 
