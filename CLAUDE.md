@@ -57,14 +57,19 @@ bubbletea/
 ├── __init__.py             # Public API exports, __version__ = "0.1.0"
 ├── tea.py                  # Program class and event loop
 ├── model.py                # Model ABC (init/update/view)
-├── messages.py             # Msg, KeyMsg, MouseMsg, WindowSizeMsg, etc.
+├── messages.py             # Msg, KeyMsg, MouseMsg, WindowSizeMsg, ClearScreenMsg, etc.
 ├── keys.py                 # KeyType enum, escape sequence → key name map
 ├── mouse.py                # MouseButton, MouseAction, MouseEvent, parse_mouse_event
-├── commands.py             # Cmd type, quit_cmd, batch, sequence, tick, every
-├── renderer.py             # Renderer and NullRenderer classes
+├── commands.py             # Cmd, BatchMsg, SequenceMsg, quit_cmd, batch, sequence, tick, every
+├── renderer.py             # Renderer (FPS-capped, thread-safe) and NullRenderer
 ├── screen.py               # ANSI constants, screen control Cmd factories
 ├── pyproject.toml          # Python packaging (requires Python 3.10+)
 ├── setup.py
+│
+├── # Experiment documentation
+├── README.md               # Project overview — describes the vibe-coding experiment
+├── MVP_TASKS.md            # Tracked task list: Go→Python feature parity gaps
+├── PYTHON_FEASIBILITY.md   # Analysis of Go features that are hard/infeasible in Python
 │
 ├── examples/               # Go example programs (each in own subdirectory)
 │   ├── go.mod              # Separate Go module for examples
@@ -220,14 +225,18 @@ final_model = p.run()
 
 ### Python Message Types
 
-| Class | Key attributes |
-|-------|---------------|
-| `KeyMsg` | `key: str`, `alt: bool` |
-| `MouseMsg` | `x`, `y`, `button`, `action`, `alt`, `ctrl`, `shift` |
-| `WindowSizeMsg` | `width: int`, `height: int` |
-| `FocusMsg` | — |
-| `BlurMsg` | — |
-| `QuitMsg` | — |
+| Class | Key attributes | Notes |
+|-------|---------------|-------|
+| `KeyMsg` | `key: str`, `alt: bool` | |
+| `MouseMsg` | `x`, `y`, `button`, `action`, `alt`, `ctrl`, `shift` | |
+| `WindowSizeMsg` | `width: int`, `height: int` | |
+| `FocusMsg` | — | Defined but not yet emitted by input reader |
+| `BlurMsg` | — | Defined but not yet emitted by input reader |
+| `QuitMsg` | — | |
+| `ClearScreenMsg` | — | Handled by event loop → `renderer.clear()` |
+| `SetWindowTitleMsg` | `title: str` | Handled by event loop → `renderer.set_window_title()` |
+| `BatchMsg` | `cmds: list` | Internal — produced by `batch()`, consumed by event loop |
+| `SequenceMsg` | `cmds: list` | Internal — produced by `sequence()`, consumed by event loop |
 
 ### Python Commands
 
@@ -235,14 +244,17 @@ final_model = p.run()
 # Quit
 return model, tea.quit_cmd
 
-# Concurrent commands
+# Concurrent commands — all run in parallel, all messages delivered
 cmd = tea.batch(cmd1, cmd2)
 
-# Sequential commands
+# Sequential commands — run in order, all messages delivered
 cmd = tea.sequence(cmd1, cmd2)
 
-# Delayed message
+# One-shot delayed message
 cmd = tea.tick(1.0, lambda: MyMsg())
+
+# Repeating tick — fires once; return from update() to re-subscribe
+cmd = tea.every(1.0, lambda: MyMsg())
 
 # Screen control (return from update or init)
 tea.enter_alt_screen()
@@ -252,6 +264,8 @@ tea.show_cursor()
 tea.enable_mouse_cell_motion()
 tea.enable_mouse_all_motion()
 tea.disable_mouse()
+tea.clear_screen()
+tea.set_window_title("My App")
 ```
 
 ### Python vs Go Naming
@@ -313,9 +327,14 @@ Then `tail -f debug.log` in another terminal.
 - **Two separate implementations exist side by side.** Go files are at the root; Python files are also at the root but identified by `.py` extension. They implement the same concepts with language-appropriate idioms.
 - **Go module path**: `github.com/charmbracelet/bubbletea`. Do not change this.
 - **Examples have their own Go module** at `examples/go.mod` — they must be modified separately from the root module.
-- **The Python port is alpha** (v0.1.0). Features like Windows support and `every()` for repeating commands are not yet complete.
+- **This repo is an experiment.** The Python port is AI-generated and unvalidated. See `README.md`. Do not represent it as production-ready.
+- **Two separate implementations exist side by side.** Go files are at the root; Python files are also at the root but identified by `.py` extension.
+- **Go module path**: `github.com/charmbracelet/bubbletea`. Do not change this.
+- **Examples have their own Go module** at `examples/go.mod` — they must be modified separately from the root module.
+- **The Python port is alpha** (v0.1.0). Windows support, focus reporting, bracketed paste, and `exec_process()` are not yet implemented. See `MVP_TASKS.md` for the current gap list and `PYTHON_FEASIBILITY.md` for features that are structurally difficult to port.
 - **Never log to stdout/stderr** in a running TUI program — it will corrupt the display. Always use file logging.
 - **Terminal raw mode** is set during `Program.run()` / `p.Run()`. If a program crashes without cleanup, the terminal may be left in raw mode; restore with `reset` or `stty sane`.
-- **Rendering is differential** in the Python `Renderer`: it only redraws if the view string changed from the last render.
+- **Python `Renderer` is FPS-capped and thread-safe.** `render()` queues a pending view; a daemon ticker thread flushes at most `fps` times per second. `start()` must be called before any `render()` call (done automatically by `Program.run()`). `close()` stops the ticker and does a final flush.
+- **`batch()` and `sequence()` work via message dispatch.** `batch()` returns a `Cmd` that produces `BatchMsg`; `sequence()` returns one that produces `SequenceMsg`. The event loop handles both — do not pattern-match on these types in model code.
 - When writing Go code, prefer `tea.Batch()` for concurrent commands and `tea.Sequence()` for ordered execution.
-- The `filter` field on `Program` (Go) can intercept all messages before they reach `Update` — useful for testing.
+- The `filter` field on `Program` (Go) can intercept all messages before they reach `Update` — useful for testing. The Python equivalent (`WithFilter`) is not yet implemented.
