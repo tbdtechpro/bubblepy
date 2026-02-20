@@ -85,16 +85,15 @@ class Program:
         
         try:
             self._setup_terminal()
+            self._renderer.start()  # begin FPS-capped render ticker
             self._setup_signals()
             
-            # Initialize model
+            # Initialize model and queue the initial render.
             cmd = self.model.init()
             if cmd is not None:
                 self._execute_cmd(cmd)
-            
-            # Initial render
             self._render()
-            
+
             # Start input reader thread
             self._start_input_reader()
             
