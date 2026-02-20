@@ -1,10 +1,11 @@
 """Commands for Bubble Tea."""
 
+import os
 import time
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
-from .messages import Msg, QuitMsg, ClearScreenMsg, SetWindowTitleMsg
+from .messages import Msg, QuitMsg, ClearScreenMsg, SetWindowTitleMsg, WindowSizeMsg
 
 
 # A Cmd is a callable that returns an optional Msg.
@@ -145,6 +146,30 @@ def tick(duration_seconds: float, fn: Callable[[], Msg]) -> Cmd:
     def cmd() -> Optional[Msg]:
         time.sleep(duration_seconds)
         return fn()
+
+    return cmd
+
+
+def window_size() -> Cmd:
+    """Command that queries the current terminal dimensions.
+
+    Returns a WindowSizeMsg with the current width and height so the model
+    can size itself at startup without waiting for a SIGWINCH event.
+    Returns None if the terminal size cannot be determined (e.g. in a pipe).
+
+    Equivalent to Go's tea.WindowSize() command.
+
+    Example::
+
+        def init(self):
+            return tea.window_size()  # get size immediately on start
+    """
+    def cmd() -> Optional[Msg]:
+        try:
+            size = os.get_terminal_size()
+            return WindowSizeMsg(width=size.columns, height=size.lines)
+        except OSError:
+            return None
 
     return cmd
 

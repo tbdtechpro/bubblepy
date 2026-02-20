@@ -19,6 +19,9 @@ from .messages import (
     SetWindowTitleMsg,
     SuspendMsg,
     ResumeMsg,
+    PasteStartMsg,
+    PasteEndMsg,
+    PasteMsg,
 )
 from .keys import Key, KeyType
 from .mouse import MouseButton, MouseAction, MouseEvent
@@ -33,7 +36,10 @@ from .commands import (
     clear_screen,
     tick,
     every,
+    window_size,
 )
+from .exec import ExecCmd, exec_process
+from .logging import log_to_file
 from .screen import (
     enter_alt_screen,
     exit_alt_screen,
@@ -62,6 +68,9 @@ __all__ = [
     "SetWindowTitleMsg",
     "SuspendMsg",
     "ResumeMsg",
+    "PasteStartMsg",
+    "PasteEndMsg",
+    "PasteMsg",
     # Keys
     "Key",
     "KeyType",
@@ -80,6 +89,12 @@ __all__ = [
     "clear_screen",
     "tick",
     "every",
+    "window_size",
+    # Exec
+    "ExecCmd",
+    "exec_process",
+    # Logging
+    "log_to_file",
     # Screen
     "enter_alt_screen",
     "exit_alt_screen",

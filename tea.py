@@ -16,6 +16,7 @@ from .messages import (
     QuitMsg, InterruptMsg, FocusMsg, BlurMsg,
     ClearScreenMsg, SetWindowTitleMsg,
     SuspendMsg, ResumeMsg,
+    PasteStartMsg, PasteEndMsg, PasteMsg,
 )
 
 
@@ -40,6 +41,7 @@ from .screen import (
     EnableMouseCellMotionMsg, EnableMouseAllMotionMsg, DisableMouseMsg,
     ShowCursorMsg, HideCursorMsg,
 )
+from .exec import ExecMsg
 
 
 class Program:
@@ -192,6 +194,14 @@ class Program:
         """Send a message to the program."""
         self._msg_queue.put(msg)
 
+    def set_window_title(self, title: str) -> None:
+        """Set the terminal window title from outside the model.
+
+        Enqueues a SetWindowTitleMsg so the renderer handles it on the next
+        event-loop iteration.  Equivalent to Go's Program.SetWindowTitle().
+        """
+        self._msg_queue.put(SetWindowTitleMsg(title=title))
+
     def println(self, *args: object) -> None:
         """Print a line above the TUI, persisting across re-renders.
 
@@ -278,6 +288,9 @@ class Program:
                 continue
             elif isinstance(msg, SuspendMsg):
                 self._suspend()
+                continue
+            elif isinstance(msg, ExecMsg):
+                self._handle_exec(msg)
                 continue
 
             # Apply the optional message filter before update().
@@ -498,6 +511,33 @@ class Program:
         self._renderer.repaint()
         self._render()
 
+    def _handle_exec(self, msg: ExecMsg) -> None:
+        """Suspend the TUI, run an external process, then resume.
+
+        The terminal is handed back to the OS for the duration of the
+        subprocess so it has full, interactive terminal access.  After the
+        process exits the TUI is restored and the callback (if any) is
+        called; its return value is enqueued for the event loop.
+
+        Not supported on Windows — silently returns without running the
+        command if SIGTSTP is absent (used as a Unix proxy here).
+        """
+        import subprocess as _sp
+
+        self.release_terminal()
+        err: Optional[Exception] = None
+        try:
+            _sp.run(msg.exec_cmd.args, **msg.exec_cmd.popen_kwargs)
+        except Exception as exc:
+            err = exc
+        finally:
+            self.restore_terminal()
+
+        if msg.callback is not None:
+            result = msg.callback(err)
+            if result is not None:
+                self._msg_queue.put(result)
+
     def _suspend(self) -> None:
         """Restore the terminal, suspend the process via SIGTSTP, then resume.
 
@@ -567,16 +607,19 @@ class Program:
 
     def _start_input_reader(self) -> None:
         """Start the input reader thread."""
-        def read_input():
+        def read_input() -> None:
             fd = self.input_tty.fileno()
-            
+            # Bracketed paste accumulation state.
+            in_paste = False
+            paste_buf: list[str] = []
+
             while not self._quit.is_set():
                 # Use select to avoid blocking
                 if sys.platform != 'win32':
                     readable, _, _ = select.select([fd], [], [], 0.1)
                     if not readable:
                         continue
-                
+
                 try:
                     # Read available input
                     data = os.read(fd, 256)
@@ -590,6 +633,39 @@ class Program:
                             continue
                         if data == b"\x1b[O":
                             self._msg_queue.put(BlurMsg())
+                            continue
+
+                    # Bracketed paste sequences.
+                    if self._bracketed_paste:
+                        text = data.decode('utf-8', errors='replace')
+                        if '\x1b[200~' in text:
+                            # Paste start: emit PasteStartMsg and buffer
+                            # everything after the marker.
+                            in_paste = True
+                            paste_buf.clear()
+                            self._msg_queue.put(PasteStartMsg())
+                            after = text.split('\x1b[200~', 1)[1]
+                            if '\x1b[201~' in after:
+                                content, _ = after.split('\x1b[201~', 1)
+                                paste_buf.append(content)
+                                self._msg_queue.put(PasteEndMsg())
+                                self._msg_queue.put(PasteMsg("".join(paste_buf)))
+                                in_paste = False
+                                paste_buf.clear()
+                            else:
+                                paste_buf.append(after)
+                            continue
+                        if in_paste:
+                            text = data.decode('utf-8', errors='replace')
+                            if '\x1b[201~' in text:
+                                content, _ = text.split('\x1b[201~', 1)
+                                paste_buf.append(content)
+                                self._msg_queue.put(PasteEndMsg())
+                                self._msg_queue.put(PasteMsg("".join(paste_buf)))
+                                in_paste = False
+                                paste_buf.clear()
+                            else:
+                                paste_buf.append(text)
                             continue
 
                     # Try to parse as mouse event first
@@ -610,10 +686,10 @@ class Program:
                     key = parse_key(data)
                     if key:
                         self._msg_queue.put(KeyMsg(key=key))
-                
+
                 except OSError:
                     break
-        
+
         self._input_thread = Thread(target=read_input, daemon=True)
         self._input_thread.start()
 

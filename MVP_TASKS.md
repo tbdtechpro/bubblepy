@@ -149,35 +149,35 @@ Features present in the Go library that have no Python equivalent.
     `Program.RestoreTerminal()`.
   - File: `tea.py`
 
-- [ ] **Implement `exec_process()` for external command execution**
-  - Go's `ExecProcess(cmd, callback)` suspends the TUI, runs an interactive subprocess
-    with full terminal access, then resumes and delivers the error via a message.
-  - Implement using `subprocess.Popen` after `release_terminal()`, with
-    `restore_terminal()` in a `finally` block.
-  - Add `ExecCmd` abstract base class, `exec_process()` command factory.
+- [x] **Implement `exec_process()` for external command execution**
+  - `exec.py` (new): `ExecCmd` dataclass (args + popen_kwargs), `ExecMsg` internal
+    dataclass, `exec_process(exec_cmd, callback)` command factory.
+  - The event loop handles `ExecMsg` via `_handle_exec()`: calls `release_terminal()`,
+    runs `subprocess.run()`, calls `restore_terminal()` in a `finally` block, then
+    calls the callback and enqueues its result.
   - Files: `exec.py` (new), `tea.py`, `__init__.py`
 
-- [ ] **Add `log_to_file()` debug logging helper**
-  - Since the TUI occupies stdout, users cannot use `print()` for debugging.
-  - Implement `log_to_file(path: str, prefix: str = "") -> logging.FileHandler` that
-    configures Python's `logging` module to write to the given file.
+- [x] **Add `log_to_file()` debug logging helper**
+  - `logging.py` (new): `log_to_file(path, prefix="")` attaches a `FileHandler` to the
+    root logger (or a named logger) at DEBUG level.  Returns the handler so the caller
+    can close it on exit.
   - Files: `logging.py` (new), `__init__.py`
 
-- [ ] **Add `Program.set_window_title()` method**
-  - Add a public method that sends `SetWindowTitleMsg` through the message queue,
-    matching Go's `Program.SetWindowTitle(title)`.
+- [x] **Add `Program.set_window_title()` method**
+  - Enqueues `SetWindowTitleMsg` through the message queue, matching Go's
+    `Program.SetWindowTitle(title)`.  Thread-safe (queue is already thread-safe).
   - File: `tea.py`
 
-- [ ] **Add `WindowSize()` command for explicit terminal size query**
-  - Go provides a `WindowSize()` command that returns a `WindowSizeMsg` with the current
-    dimensions, usable from `init()` without waiting for a resize event.
-  - Implement using `os.get_terminal_size()` wrapped in a `Cmd`.
+- [x] **Add `WindowSize()` command for explicit terminal size query**
+  - `window_size()` in `commands.py`: calls `os.get_terminal_size()`, returns
+    `WindowSizeMsg` on success or `None` on `OSError`.  Usable from `init()` to
+    get the terminal size immediately without waiting for a SIGWINCH event.
   - Files: `commands.py`, `__init__.py`
 
-- [ ] **Add X10 legacy mouse protocol support**
-  - `mouse.py` only parses SGR extended mouse events. Terminals that don't support SGR
-    fall back to the X10 protocol (byte-encoded, max coordinate 223).
-  - Add an X10 parser alongside the existing SGR parser in `parse_mouse_event()`.
+- [x] **Add X10 legacy mouse protocol support**
+  - `parse_mouse_event()` now checks for the X10 format (`ESC [ M <cb> <cx> <cy>`,
+    6 bytes) before the SGR check.  Decodes button, modifiers, and 0-based coordinates
+    from the raw byte encoding (value + 0x20).  Button 3 is mapped to RELEASE.
   - File: `mouse.py`
 
 - [x] **Add thread safety to `Renderer`**
@@ -191,18 +191,19 @@ Features present in the Go library that have no Python equivalent.
   - *Note: `start()`/`stop()` are now implemented as part of Task 6 (FPS rendering).*
   - File: `renderer.py` ✅ (completed with Task 6)
 
-- [ ] **Add bracketed paste support**
-  - Go supports `WithoutBracketedPaste()` (it's on by default) and emits `PasteMsg` /
-    `PasteStartMsg` / `PasteEndMsg`.
-  - Add `PasteMsg`, `PasteStartMsg`, `PasteEndMsg` dataclasses to `messages.py`.
-  - Parse bracketed paste sequences (`\x1b[200~`...`\x1b[201~`) in the input reader
-    when `bracketed_paste=True`.
-  - Export from `__init__.py`.
+- [x] **Add bracketed paste support**
+  - `PasteStartMsg`, `PasteEndMsg`, `PasteMsg` dataclasses added to `messages.py` and
+    exported from `__init__.py`.
+  - Input reader (in `_start_input_reader`) detects `\x1b[200~` / `\x1b[201~` when
+    `bracketed_paste=True`.  Accumulates paste text across multiple `os.read()` calls;
+    emits `PasteStartMsg`, `PasteEndMsg`, then `PasteMsg(text)` when complete.
+    The terminal escape sequences are enabled/disabled in `_setup_terminal()` /
+    `_cleanup()` (already implemented: `\x1b[?2004h` / `\x1b[?2004l`).
   - Files: `messages.py`, `tea.py`, `__init__.py`
 
-- [ ] **Fix `setup.py` and `pyproject.toml` placeholder values**
-  - Author name, email, and repository URLs still contain `"Your Name"`,
-    `"your.email@example.com"`, and `"your-repo"`.
+- [x] **Fix `setup.py` and `pyproject.toml` placeholder values**
+  - Author → `"Charm" <vt100@charm.sh>`.
+  - Repository URLs → `https://github.com/charmbracelet/bubbletea`.
   - Files: `setup.py`, `pyproject.toml`
 
 - [ ] **Add `CHANGELOG.md`**
