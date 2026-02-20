@@ -1,38 +1,39 @@
-# Bubble Tea (Python Port)
+# bubbletea — Python port (experiment)
 
+This repository is an experiment to explore how feasible it is to translate a non-trivial Go library into idiomatic Python using AI-assisted ("vibe coded") development with minimal direct human authorship of the code itself.
 
-The fun, functional and stateful way to build terminal apps. A Python framework
-based on [The Elm Architecture][elm]. Bubble Tea is well-suited for simple and
-complex terminal applications, either inline, full-window, or a mix of both.
-
-> **Note**: This is a Python port of the original [Go Bubble Tea library][original] 
-> by [Charm][charm].
-
-
-
-### Requirements
-
-- Python 3.10+
-- Unix-like OS (Linux, macOS) — Windows support is planned
+The subject of the translation is [Bubble Tea](https://github.com/charmbracelet/bubbletea), a TUI framework by [Charm](https://charm.sh) built on [The Elm Architecture](https://guide.elm-lang.org/architecture/).
 
 ---
 
-## Tutorial
+## What this is
 
-Bubble Tea is based on the functional design paradigms of [The Elm
-Architecture][elm], which works beautifully with Python. It's a delightful way
-to build applications.
+- A research experiment, not a production library.
+- The Python code, commit history, and documentation in this repo are primarily AI-generated. They do not represent the engineering efforts of the human running the experiment.
+- The human's contribution is the experimental design, direction, review, and judgement calls — not the code itself.
 
-This tutorial assumes you have a working knowledge of Python.
+## What this is not
 
-The source code for this program is available in [`examples/basics.py`](examples/basics.py).
+- A maintained or supported library.
+- A replacement for or competitor to the original [Go Bubble Tea](https://github.com/charmbracelet/bubbletea).
+- Validated software. No assumptions should be made about correctness, completeness, or fitness for any purpose until independent validation has been done.
 
-[elm]: https://guide.elm-lang.org/architecture/
-[original]: https://github.com/charmbracelet/bubbletea
-[charm]: https://charm.sh
+---
 
-### Let's get to it
+## Status
 
-For this tutorial, we're making a shopping list.
+Early-stage / alpha. Core Elm Architecture loop (model → update → view) is functional on Unix. Many Go features are not yet ported. See [`MVP_TASKS.md`](MVP_TASKS.md) for the current gap analysis.
 
-To start, we'll import the Bubble Tea library, which we'll call `tea` for short:
+---
+
+## Original library
+
+All credit for the design and architecture belongs to the [Charm](https://charm.sh) team.
+
+> [github.com/charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea)
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
