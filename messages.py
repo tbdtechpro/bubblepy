@@ -59,6 +59,17 @@ class QuitMsg(Msg):
 
 
 @dataclass
+class InterruptMsg(Msg):
+    """Message sent when the program receives SIGINT (ctrl+c).
+
+    Unlike QuitMsg, InterruptMsg is delivered to the model's update() method
+    before the program exits, giving it a chance to react (e.g. save state).
+    The event loop then breaks and run() raises ErrInterrupted.
+    """
+    pass
+
+
+@dataclass
 class CustomMsg(Msg):
     """Wrapper for custom user-defined messages."""
     value: Any
@@ -91,3 +102,31 @@ class ClearScreenMsg(Msg):
 class SetWindowTitleMsg(Msg):
     """Message that sets the terminal window title."""
     title: str
+
+
+@dataclass
+class PasteStartMsg(Msg):
+    """Message sent when a bracketed paste sequence begins (ESC [ 200 ~).
+
+    Only emitted when bracketed_paste=True is passed to Program.
+    """
+    pass
+
+
+@dataclass
+class PasteEndMsg(Msg):
+    """Message sent when a bracketed paste sequence ends (ESC [ 201 ~).
+
+    Only emitted when bracketed_paste=True is passed to Program.
+    """
+    pass
+
+
+@dataclass
+class PasteMsg(Msg):
+    """Message containing the full text of a bracketed paste.
+
+    Emitted after PasteEndMsg; text is the complete pasted content.
+    Only emitted when bracketed_paste=True is passed to Program.
+    """
+    text: str

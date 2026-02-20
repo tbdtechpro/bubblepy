@@ -14,9 +14,9 @@ setup(
     description="A Python TUI framework based on The Elm Architecture — port of the Go Bubble Tea library",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/your-repo/bubbletea-python",
-    author="Your Name",
-    author_email="your.email@example.com",
+    url="https://github.com/charmbracelet/bubbletea",
+    author="Charm",
+    author_email="vt100@charm.sh",
     license="MIT",
 
     # Package configuration
@@ -83,8 +83,8 @@ setup(
 
     # Project URLs
     project_urls={
-        "Bug Reports": "https://github.com/your-repo/bubbletea-python/issues",
-        "Source": "https://github.com/your-repo/bubbletea-python",
+        "Bug Reports": "https://github.com/charmbracelet/bubbletea/issues",
+        "Source": "https://github.com/charmbracelet/bubbletea",
         "Original Go Library": "https://github.com/charmbracelet/bubbletea",
     },
 )

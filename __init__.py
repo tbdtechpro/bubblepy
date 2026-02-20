@@ -5,7 +5,7 @@ Ported from the Go library: https://github.com/charmbracelet/bubbletea
 """
 
 from .model import Model
-from .tea import Program
+from .tea import Program, ErrInterrupted, ErrProgramKilled, ErrProgramPanic
 from .messages import (
     Msg,
     KeyMsg,
@@ -14,10 +14,14 @@ from .messages import (
     FocusMsg,
     BlurMsg,
     QuitMsg,
+    InterruptMsg,
     ClearScreenMsg,
     SetWindowTitleMsg,
     SuspendMsg,
     ResumeMsg,
+    PasteStartMsg,
+    PasteEndMsg,
+    PasteMsg,
 )
 from .keys import Key, KeyType
 from .mouse import MouseButton, MouseAction, MouseEvent
@@ -32,7 +36,10 @@ from .commands import (
     clear_screen,
     tick,
     every,
+    window_size,
 )
+from .exec import ExecCmd, exec_process
+from .logging import log_to_file
 from .screen import (
     enter_alt_screen,
     exit_alt_screen,
@@ -56,10 +63,14 @@ __all__ = [
     "FocusMsg",
     "BlurMsg",
     "QuitMsg",
+    "InterruptMsg",
     "ClearScreenMsg",
     "SetWindowTitleMsg",
     "SuspendMsg",
     "ResumeMsg",
+    "PasteStartMsg",
+    "PasteEndMsg",
+    "PasteMsg",
     # Keys
     "Key",
     "KeyType",
@@ -78,6 +89,12 @@ __all__ = [
     "clear_screen",
     "tick",
     "every",
+    "window_size",
+    # Exec
+    "ExecCmd",
+    "exec_process",
+    # Logging
+    "log_to_file",
     # Screen
     "enter_alt_screen",
     "exit_alt_screen",
@@ -87,6 +104,10 @@ __all__ = [
     "show_cursor",
     "hide_cursor",
     "suspend",
+    # Exceptions
+    "ErrInterrupted",
+    "ErrProgramKilled",
+    "ErrProgramPanic",
     # Version
     "__version__",
 ]

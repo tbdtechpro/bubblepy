@@ -74,30 +74,37 @@ These are bugs or missing wiring in the current implementation that affect corre
     restored — equivalent to Go's `Program.Wait()`.
   - File: `tea.py`
 
-- [ ] **Add `Program.println()` / `Program.printf()` to print above the TUI**
-  - Go's `Program.Println()` / `Program.Printf()` inject a `printLineMessage` that the
-    renderer outputs above the managed TUI area, persisting across re-renders.
-  - Add equivalents that enqueue a print message handled before the next frame.
-  - Files: `tea.py`, `renderer.py`
+- [x] **Add `Program.println()` / `Program.printf()` to print above the TUI**
+  - `Renderer.print_line(line)` appends to a locked `_print_queue`.  On each `_flush()`,
+    pending print lines are output above the TUI (they scroll into terminal history), then
+    the TUI is redrawn.  A no-op in alt-screen mode (no scrollback exists).
+  - `Program.println(*args)` joins args with spaces; `printf(fmt, *args)` uses `%`
+    formatting — both delegate to `renderer.print_line()`.
+  - `NullRenderer.print_line()` is a no-op.
+  - Files: `renderer.py`, `tea.py`
 
-- [ ] **Add `InterruptMsg` and wire ctrl+c as interrupt, not quit**
-  - Go distinguishes `InterruptMsg` (SIGINT / ctrl+c) from `QuitMsg`.
-  - Add `InterruptMsg` dataclass to `messages.py`; handle SIGINT in `_setup_signals()`
-    by sending `InterruptMsg`; handle `InterruptMsg` in `_event_loop()` to break and set
-    an interrupted flag on `run()`'s return.
-  - Export from `__init__.py`.
+- [x] **Add `InterruptMsg` and wire ctrl+c as interrupt, not quit**
+  - `InterruptMsg` dataclass added to `messages.py` and exported.
+  - `_setup_signals()` registers `handle_int()` for `SIGINT`; it enqueues `InterruptMsg`
+    instead of `QuitMsg`, so the model gets to react before the program exits.
+  - The event loop delivers `InterruptMsg` to `model.update()`, then sets `_interrupted`
+    and breaks.  `run()` raises `ErrInterrupted` after terminal cleanup.
   - Files: `messages.py`, `tea.py`, `__init__.py`
 
-- [ ] **Add error return types: `ErrProgramKilled`, `ErrProgramPanic`, `ErrInterrupted`**
-  - Go's `Program.Run()` returns typed sentinel errors so callers can distinguish graceful
-    quit from kill, interrupt, or panic.
-  - Define Python equivalents as exception subclasses; raise appropriately from `run()`.
-  - File: `tea.py`
+- [x] **Add error return types: `ErrProgramKilled`, `ErrProgramPanic`, `ErrInterrupted`**
+  - Three `Exception` subclasses defined in `tea.py` and exported from `__init__.py`:
+    - `ErrInterrupted` — SIGINT / ctrl+c exit.
+    - `ErrProgramKilled` — `Program.kill()` exit.
+    - `ErrProgramPanic` — unhandled exception in model or command.
+  - `run()` raises the appropriate exception after `_cleanup()` completes.
+  - Files: `tea.py`, `__init__.py`
 
-- [ ] **Add exception recovery**
-  - Wrap `_event_loop()` and `_execute_cmd_async()` in `try/except Exception` blocks that
-    call `_cleanup()` before re-raising, ensuring the terminal is always restored even on
-    unexpected errors.
+- [x] **Add exception recovery**
+  - `_execute_cmd_async()`: exceptions in commands are caught; stored in `self._panic`
+    and a `QuitMsg` is queued so the event loop exits cleanly.  `run()` re-raises as
+    `ErrProgramPanic` after terminal cleanup.
+  - `run()`: wraps `model.init()` and `_event_loop()` in `try/except` blocks to ensure
+    `_cleanup()` runs before any exception propagates.
   - File: `tea.py`
 
 ---
@@ -106,69 +113,71 @@ These are bugs or missing wiring in the current implementation that affect corre
 
 Features present in the Go library that have no Python equivalent.
 
-- [ ] **Add `WithContext` / context-based cancellation**
-  - Accept an optional `threading.Event stop_event` in the constructor; check it in the
-    event loop timeout poll.
+- [x] **Add `WithContext` / context-based cancellation**
+  - `Program.__init__` accepts `stop_event: Optional[threading.Event]`.  The event loop
+    checks `stop_event.is_set()` on each iteration (before blocking on the queue) and
+    exits gracefully when it fires — equivalent to Go's `WithContext(ctx)`.
   - File: `tea.py`
 
-- [ ] **Add `WithFilter` / message filtering**
-  - Go's `WithFilter(func(Model, Msg) Msg)` lets the program intercept every message
-    before it reaches `Update`.
-  - Add a `filter: Optional[Callable[[Model, Msg], Optional[Msg]]]` parameter to
-    `Program.__init__`; apply it at the top of `_event_loop()`.
+- [x] **Add `WithFilter` / message filtering**
+  - `Program.__init__` accepts `filter: Optional[Callable[[Model, Msg], Optional[Msg]]]`.
+    Applied in `_event_loop()` before `model.update()`: returning the (possibly
+    transformed) message continues processing; returning `None` discards it.
+    Equivalent to Go's `WithFilter` option.
   - File: `tea.py`
 
-- [ ] **Add `WithReportFocus` / focus event reporting**
-  - `FocusMsg` and `BlurMsg` exist but are never emitted — the input reader does not
-    parse focus event escape sequences (`\x1b[I` = focus, `\x1b[O` = blur).
-  - Add a `report_focus: bool` constructor parameter; when enabled, write `\x1b[?1004h`
-    on setup, parse the sequences in `_start_input_reader`, put `FocusMsg`/`BlurMsg`
-    into the queue.
-  - Files: `tea.py`, `screen.py`
+- [x] **Add `WithReportFocus` / focus event reporting**
+  - `Program.__init__` accepts `report_focus: bool`.  When enabled:
+    - `_setup_terminal()` writes `\x1b[?1004h` to enable focus events.
+    - `_cleanup()` writes `\x1b[?1004l` to disable them.
+    - The input reader recognises `\x1b[I` → `FocusMsg` and `\x1b[O` → `BlurMsg`.
+  - Files: `tea.py`
 
-- [ ] **Add `use_null_renderer` option**
-  - Go allows `WithoutRenderer()` to disable all rendering output, useful for headless
-    testing.
-  - Add a `use_null_renderer: bool` constructor parameter that swaps `Renderer` for
-    `NullRenderer`.
+- [x] **Add `use_null_renderer` option**
+  - `Program.__init__` accepts `use_null_renderer: bool`.  When `True`, the renderer is
+    `NullRenderer` (all output suppressed), useful for headless testing.
+    Equivalent to Go's `WithoutRenderer()`.
   - File: `tea.py`
 
-- [ ] **Add `release_terminal()` / `restore_terminal()`**
-  - Go exposes these to temporarily hand the terminal back to the OS (e.g. before opening
-    an editor) and reclaim it afterwards.
-  - Implement `release_terminal()` (restore termios, stop renderer, disable mouse) and
-    `restore_terminal()` (re-enter raw mode, re-enable options, restart renderer, repaint).
+- [x] **Add `release_terminal()` / `restore_terminal()`**
+  - `release_terminal()`: stops renderer, shows cursor, exits alt-screen, disables mouse
+    and bracketed paste / focus reporting, restores termios to cooked mode.
+  - `restore_terminal()`: re-enters raw mode, re-enables all configured options, restarts
+    renderer, forces a full repaint.
+  - Used internally by `_suspend()` and can be called directly before launching an
+    external editor or subprocess.  Equivalent to Go's `Program.ReleaseTerminal()` /
+    `Program.RestoreTerminal()`.
   - File: `tea.py`
 
-- [ ] **Implement `exec_process()` for external command execution**
-  - Go's `ExecProcess(cmd, callback)` suspends the TUI, runs an interactive subprocess
-    with full terminal access, then resumes and delivers the error via a message.
-  - Implement using `subprocess.Popen` after `release_terminal()`, with
-    `restore_terminal()` in a `finally` block.
-  - Add `ExecCmd` abstract base class, `exec_process()` command factory.
+- [x] **Implement `exec_process()` for external command execution**
+  - `exec.py` (new): `ExecCmd` dataclass (args + popen_kwargs), `ExecMsg` internal
+    dataclass, `exec_process(exec_cmd, callback)` command factory.
+  - The event loop handles `ExecMsg` via `_handle_exec()`: calls `release_terminal()`,
+    runs `subprocess.run()`, calls `restore_terminal()` in a `finally` block, then
+    calls the callback and enqueues its result.
   - Files: `exec.py` (new), `tea.py`, `__init__.py`
 
-- [ ] **Add `log_to_file()` debug logging helper**
-  - Since the TUI occupies stdout, users cannot use `print()` for debugging.
-  - Implement `log_to_file(path: str, prefix: str = "") -> logging.FileHandler` that
-    configures Python's `logging` module to write to the given file.
+- [x] **Add `log_to_file()` debug logging helper**
+  - `logging.py` (new): `log_to_file(path, prefix="")` attaches a `FileHandler` to the
+    root logger (or a named logger) at DEBUG level.  Returns the handler so the caller
+    can close it on exit.
   - Files: `logging.py` (new), `__init__.py`
 
-- [ ] **Add `Program.set_window_title()` method**
-  - Add a public method that sends `SetWindowTitleMsg` through the message queue,
-    matching Go's `Program.SetWindowTitle(title)`.
+- [x] **Add `Program.set_window_title()` method**
+  - Enqueues `SetWindowTitleMsg` through the message queue, matching Go's
+    `Program.SetWindowTitle(title)`.  Thread-safe (queue is already thread-safe).
   - File: `tea.py`
 
-- [ ] **Add `WindowSize()` command for explicit terminal size query**
-  - Go provides a `WindowSize()` command that returns a `WindowSizeMsg` with the current
-    dimensions, usable from `init()` without waiting for a resize event.
-  - Implement using `os.get_terminal_size()` wrapped in a `Cmd`.
+- [x] **Add `WindowSize()` command for explicit terminal size query**
+  - `window_size()` in `commands.py`: calls `os.get_terminal_size()`, returns
+    `WindowSizeMsg` on success or `None` on `OSError`.  Usable from `init()` to
+    get the terminal size immediately without waiting for a SIGWINCH event.
   - Files: `commands.py`, `__init__.py`
 
-- [ ] **Add X10 legacy mouse protocol support**
-  - `mouse.py` only parses SGR extended mouse events. Terminals that don't support SGR
-    fall back to the X10 protocol (byte-encoded, max coordinate 223).
-  - Add an X10 parser alongside the existing SGR parser in `parse_mouse_event()`.
+- [x] **Add X10 legacy mouse protocol support**
+  - `parse_mouse_event()` now checks for the X10 format (`ESC [ M <cb> <cx> <cy>`,
+    6 bytes) before the SGR check.  Decodes button, modifiers, and 0-based coordinates
+    from the raw byte encoding (value + 0x20).  Button 3 is mapped to RELEASE.
   - File: `mouse.py`
 
 - [x] **Add thread safety to `Renderer`**
@@ -182,18 +191,19 @@ Features present in the Go library that have no Python equivalent.
   - *Note: `start()`/`stop()` are now implemented as part of Task 6 (FPS rendering).*
   - File: `renderer.py` ✅ (completed with Task 6)
 
-- [ ] **Add bracketed paste support**
-  - Go supports `WithoutBracketedPaste()` (it's on by default) and emits `PasteMsg` /
-    `PasteStartMsg` / `PasteEndMsg`.
-  - Add `PasteMsg`, `PasteStartMsg`, `PasteEndMsg` dataclasses to `messages.py`.
-  - Parse bracketed paste sequences (`\x1b[200~`...`\x1b[201~`) in the input reader
-    when `bracketed_paste=True`.
-  - Export from `__init__.py`.
+- [x] **Add bracketed paste support**
+  - `PasteStartMsg`, `PasteEndMsg`, `PasteMsg` dataclasses added to `messages.py` and
+    exported from `__init__.py`.
+  - Input reader (in `_start_input_reader`) detects `\x1b[200~` / `\x1b[201~` when
+    `bracketed_paste=True`.  Accumulates paste text across multiple `os.read()` calls;
+    emits `PasteStartMsg`, `PasteEndMsg`, then `PasteMsg(text)` when complete.
+    The terminal escape sequences are enabled/disabled in `_setup_terminal()` /
+    `_cleanup()` (already implemented: `\x1b[?2004h` / `\x1b[?2004l`).
   - Files: `messages.py`, `tea.py`, `__init__.py`
 
-- [ ] **Fix `setup.py` and `pyproject.toml` placeholder values**
-  - Author name, email, and repository URLs still contain `"Your Name"`,
-    `"your.email@example.com"`, and `"your-repo"`.
+- [x] **Fix `setup.py` and `pyproject.toml` placeholder values**
+  - Author → `"Charm" <vt100@charm.sh>`.
+  - Repository URLs → `https://github.com/charmbracelet/bubbletea`.
   - Files: `setup.py`, `pyproject.toml`
 
 - [ ] **Add `CHANGELOG.md`**
