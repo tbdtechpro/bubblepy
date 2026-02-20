@@ -115,37 +115,37 @@ as incomplete sequences.
 
 These are gaps that require work but are structurally compatible with Python.
 
-### 3.1 Bracketed paste detection
+### 3.1 Bracketed paste detection ✅ Implemented
 
 The Go parser detects `\x1b[200~` / `\x1b[201~` markers and treats everything between
 them as literal text, bypassing key mapping. This is a self-contained parsing change that
 can be added to `keys.py`.
 
-### 3.2 Focus / blur reporting
+### 3.2 Focus / blur reporting ✅ Implemented
 
 `focus.go` defines `FocusMsg` / `BlurMsg` and the ANSI sequences that enable/disable
 focus events (`\x1b[?1004h` / `\x1b[?1004l`). Both message types already exist in the
 Python `messages.py`; they just need to be emitted by the input parser when the
 corresponding escape sequences are received.
 
-### 3.3 `InterruptMsg` and error return types
+### 3.3 `InterruptMsg` and error return types ✅ Implemented
 
 Go distinguishes `QuitMsg` (clean exit), `InterruptMsg` (SIGINT / ctrl+c), and fatal
 errors (`ErrProgramPanic`, `ErrProgramKilled`, `ErrInterrupted`). The Python port
 currently collapses all exit paths. Adding the distinction is a small, contained change.
 
-### 3.4 Rendering thread safety
+### 3.4 Rendering thread safety ✅ Implemented
 
 `standard_renderer.go` wraps all buffer access in a mutex. The Python `Renderer` has no
 lock. Adding `threading.Lock` around the render buffer is a one-line change per method.
 
-### 3.5 `LogToFile` debug helper
+### 3.5 `LogToFile` debug helper ✅ Implemented
 
 Go provides `tea.LogToFile(path, prefix)` to redirect the standard logger to a file
 before the TUI takes over stdout. Python's `logging` module can do the same; it is just
 not exposed as a convenience function yet.
 
-### 3.6 `Println` / `Printf` (print above the TUI)
+### 3.6 `Println` / `Printf` (print above the TUI) ✅ Implemented
 
 Go's `Program.Println()` queues lines to be printed above the current view on the next
 render. The renderer handles them in `flush()` via `queuedMessageLines`. Python's
@@ -181,7 +181,7 @@ fidelity of the Go implementation.
 | Concurrent command execution | Approximable — threads work, not goroutines |
 | Framerate rendering | Approximable — ~30 FPS realistic ceiling |
 | Key / mouse parsing | Feasible — tedious, largely done |
-| Focus / blur / bracketed paste | Feasible — straightforward additions |
+| Focus / blur / bracketed paste | ✅ Implemented |
 | Cancellable input reading | Hard — current polling approach good enough for MVP |
 | Escape sequence disambiguation | Hard — needs timeout machinery |
 | Process suspension (ctrl+z) | Hard — Unix only, requires sequencing care |

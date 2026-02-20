@@ -34,6 +34,20 @@ All credit for the design and architecture belongs to the [Charm](https://charm.
 
 ---
 
+## Tutorials (Python)
+
+- [Basics](tutorials/python-basics/README.md) — Model / Update / View, key handling, tick/re-subscription
+- [Commands](tutorials/python-commands/README.md) — deep dive into `Cmd`, `batch`, `sequence`, background I/O
+
+---
+
+## Attribution
+
+See [ATTRIBUTION.md](ATTRIBUTION.md) for full credits — including the original Charm team,
+Evan Czaplicki (The Elm Architecture), and the AI tooling used in this experiment.
+
+---
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

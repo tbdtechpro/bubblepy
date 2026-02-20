@@ -12,7 +12,8 @@ Contributions are welcome, but be aware that:
 - Many Go features are not yet ported. See [`MVP_TASKS.md`](MVP_TASKS.md) for the current
   gap list and [`PYTHON_FEASIBILITY.md`](PYTHON_FEASIBILITY.md) for features that are
   structurally difficult to replicate in Python.
-- There are currently no tests.
+- 117 tests exist across `keys`, `mouse`, `commands`, `renderer`, `screen`, and `Program`
+  lifecycle. Run them with `pytest`.
 
 ---
 
@@ -31,7 +32,7 @@ pip install -e ".[dev]"
 ## Running checks
 
 ```bash
-# Tests (none yet — see MVP_TASKS.md)
+# Tests
 pytest
 
 # Type checking
@@ -70,6 +71,8 @@ task lint   # golangci-lint run
 
 See [`CLAUDE.md`](CLAUDE.md) for a full file-by-file breakdown of both the Go and Python
 implementations, key types, naming conventions, and notes for AI assistants.
+
+See [`ATTRIBUTION.md`](ATTRIBUTION.md) for credits.
 
 ---
 
