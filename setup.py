@@ -2,7 +2,7 @@
 
 import os
 
-from setuptools import find_packages, setup
+from setuptools import setup
 
 # Read README for long description
 here = os.path.abspath(os.path.dirname(__file__))
@@ -10,7 +10,7 @@ with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 setup(
-    name="bubbletea",
+    name="charm-bubbletea",
     version="0.1.0",
     description="A Python TUI framework based on The Elm Architecture (port of Go Bubble Tea)",
     long_description=long_description,
@@ -19,9 +19,10 @@ setup(
     author="Charm",
     author_email="vt100@charm.sh",
     license="MIT",
-    # Package configuration
-    packages=find_packages(exclude=["tests", "tests.*", "examples"]),
-    py_modules=["bubbletea"],
+    # Flat-layout: all source files live at the repo root alongside __init__.py.
+    # Explicitly list the package and map it to "" so setuptools finds the right files.
+    packages=["bubbletea"],
+    package_dir={"bubbletea": ""},
     python_requires=">=3.10",
     # No external dependencies for core functionality
     install_requires=[],
