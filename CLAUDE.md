@@ -328,13 +328,10 @@ Then `tail -f debug.log` in another terminal.
 - **Go module path**: `github.com/charmbracelet/bubbletea`. Do not change this.
 - **Examples have their own Go module** at `examples/go.mod` — they must be modified separately from the root module.
 - **This repo is an experiment.** The Python port is AI-generated and unvalidated. See `README.md`. Do not represent it as production-ready.
-- **Two separate implementations exist side by side.** Go files are at the root; Python files are also at the root but identified by `.py` extension.
-- **Go module path**: `github.com/charmbracelet/bubbletea`. Do not change this.
-- **Examples have their own Go module** at `examples/go.mod` — they must be modified separately from the root module.
-- **The Python port is alpha** (v0.1.0). Windows support, focus reporting, bracketed paste, and `exec_process()` are not yet implemented. See `MVP_TASKS.md` for the current gap list and `PYTHON_FEASIBILITY.md` for features that are structurally difficult to port.
+- **The Python port is alpha** (v0.1.0). Windows support is not yet implemented. Focus reporting, bracketed paste, `exec_process()`, and `WithFilter` are all implemented. See `PYTHON_FEASIBILITY.md` for features that are structurally difficult to port.
 - **Never log to stdout/stderr** in a running TUI program — it will corrupt the display. Always use file logging.
 - **Terminal raw mode** is set during `Program.run()` / `p.Run()`. If a program crashes without cleanup, the terminal may be left in raw mode; restore with `reset` or `stty sane`.
 - **Python `Renderer` is FPS-capped and thread-safe.** `render()` queues a pending view; a daemon ticker thread flushes at most `fps` times per second. `start()` must be called before any `render()` call (done automatically by `Program.run()`). `close()` stops the ticker and does a final flush.
 - **`batch()` and `sequence()` work via message dispatch.** `batch()` returns a `Cmd` that produces `BatchMsg`; `sequence()` returns one that produces `SequenceMsg`. The event loop handles both — do not pattern-match on these types in model code.
 - When writing Go code, prefer `tea.Batch()` for concurrent commands and `tea.Sequence()` for ordered execution.
-- The `filter` field on `Program` (Go) can intercept all messages before they reach `Update` — useful for testing. The Python equivalent (`WithFilter`) is not yet implemented.
+- The `filter` parameter on `Program` (Python `filter=`, Go `WithFilter`) intercepts all messages before they reach `Update` — useful for testing.

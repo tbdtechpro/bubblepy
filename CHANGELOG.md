@@ -57,6 +57,21 @@ The Python port uses [Semantic Versioning](https://semver.org/).
   - `examples/views.py` — multi-view app with choice list and animated progress bar.
   - `examples/mouse.py` — live mouse event log with all-motion tracking.
   - `examples/http.py` — async HTTP fetch using a background Cmd.
+  - `examples/exec.py` — launch `$EDITOR` via `exec_process()` with full terminal handoff.
+
+- **Packaging fixes** (found during lipgloss integration)
+  - Distribution renamed from `bubbletea` to `charm-bubbletea` to avoid PyPI name collision
+    with an unrelated medical chatbot library.  Import name (`import bubbletea`) is unchanged.
+  - Flat-layout editable install fixed: `pyproject.toml` and `setup.py` now use
+    `packages = ["bubbletea"]` + `package-dir = {"bubbletea": ""}` so `pip install -e .`
+    generates a valid editable mapping and `import bubbletea` works without `.pth` hacks.
+  - `tutorials/` and `examples/` directories no longer leak as namespace packages in the
+    installed distribution.
+
+- **Documentation**
+  - `MVP_TEST_PLAN.md` — comprehensive manual + automated test plan for MVP sign-off.
+  - `Contributing.md` — expanded with full Python developer workflow (architecture, adding
+    messages/commands, testing patterns, debug logging, code style, commit conventions).
 
 ---
 
