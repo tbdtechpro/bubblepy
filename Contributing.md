@@ -81,3 +81,126 @@ See [`ATTRIBUTION.md`](ATTRIBUTION.md) for credits.
 Open tasks are tracked in [`MVP_TASKS.md`](MVP_TASKS.md). Unchecked items are fair game.
 If you're implementing something non-trivial, check `PYTHON_FEASIBILITY.md` first — some
 Go features have fundamental constraints in Python that affect the right approach.
+
+---
+
+## Python developer workflow
+
+### Architecture overview
+
+The Python port mirrors the Elm Architecture used by the Go library:
+
+| File | Purpose |
+|------|---------|
+| `model.py` | `Model` ABC — implement `init()`, `update()`, `view()` |
+| `tea.py` | `Program` class and event loop |
+| `messages.py` | All `Msg` dataclasses |
+| `commands.py` | `Cmd` type alias and command factories |
+| `renderer.py` | FPS-capped, thread-safe terminal renderer |
+| `screen.py` | ANSI helpers and screen-control `Cmd` factories |
+| `keys.py` | Key name constants and escape-sequence map |
+| `mouse.py` | Mouse event parsing (SGR and X10 protocols) |
+| `exec.py` | `exec_process()` — run external commands with terminal handoff |
+| `log.py` | `log_to_file()` — file-based debug logging |
+| `__init__.py` | Public API — every public symbol must be re-exported here |
+
+### Adding a new message type
+
+1. Define a `@dataclass` in `messages.py` that subclasses `Msg`.
+2. Export it from `__init__.py`.
+3. Handle it in `tea.py`'s `_event_loop()` if it requires special program-level treatment
+   (like `ClearScreenMsg` or `SetWindowTitleMsg`); otherwise let it flow to `model.update()`.
+
+```python
+# messages.py
+@dataclass
+class MyMsg(Msg):
+    value: str
+```
+
+### Adding a new command factory
+
+1. Add a function in `commands.py` (or `screen.py` for screen-control commands) that
+   returns a `Cmd` — a zero-argument callable returning `Optional[Msg]`.
+2. Export it from `__init__.py`.
+
+```python
+# commands.py
+def my_cmd(value: str) -> Cmd:
+    def _run() -> Optional[Msg]:
+        return MyMsg(value=value)
+    return _run
+```
+
+### Writing tests
+
+Tests live in `tests/`. Each module has a corresponding `test_<module>.py`. Use the
+fixtures in `tests/conftest.py` to create headless `Program` instances:
+
+```python
+# tests/test_example.py
+from tests.conftest import make_program
+import bubbletea as tea
+
+def test_my_feature():
+    # make_program uses NullRenderer and StringIO output — no real terminal needed.
+    model, p = make_program(MyModel())
+    p.send(MyMsg(value="hello"))
+    p.quit()
+    final = p.run()
+    assert final.some_field == "hello"
+```
+
+Key testing patterns:
+
+- **Headless programs**: use `make_program()` from `conftest.py` — sets
+  `use_null_renderer=True` and pipes output to `StringIO`.
+- **Message injection**: call `p.send(msg)` from the test thread; the event loop
+  delivers it to `model.update()` on the next iteration.
+- **Shutdown**: call `p.quit()` or return `tea.quit_cmd` from `update()`, then call
+  `p.wait()` to block until teardown completes.
+- **Filter testing**: pass `filter=my_filter` to `make_program()` and assert that
+  certain messages are discarded or transformed.
+
+### Debugging
+
+The TUI owns the terminal; never print to stdout/stderr during a running program.
+Use file logging instead:
+
+```python
+import bubbletea as tea
+handler = tea.log_to_file("debug.log", "myapp")
+# ... run program ...
+handler.close()
+```
+
+Then in a second terminal:
+
+```bash
+tail -f debug.log
+```
+
+### Code style rules
+
+- **Formatter**: `black` (line length 100).
+- **Import ordering**: `isort` with `--profile black`.
+- **Type annotations**: required on all public functions and methods (`mypy --strict`).
+- **No stdout/stderr** during TUI execution — always use file logging.
+- Match on message types with `isinstance()`, not string comparison.
+- Prefer `@dataclass` for all `Msg` and result types.
+
+### Running a single example
+
+Examples in `examples/*.py` add the repo root to `sys.path` automatically:
+
+```bash
+python examples/simple.py
+python examples/exec.py
+BUBBLETEA_LOG=debug.log python examples/http.py
+```
+
+### Commit conventions
+
+- One logical change per commit.
+- Prefix with scope: `fix(python):`, `feat(python):`, `docs:`, `test(python):`, etc.
+- Never commit with `--no-verify`; fix linter errors instead.

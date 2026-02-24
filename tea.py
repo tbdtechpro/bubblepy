@@ -254,9 +254,10 @@ class Program:
             # matching Go's WithFilter semantics: the filter sees every message
             # including QuitMsg and InterruptMsg.
             if self._filter is not None:
-                msg = self._filter(self.model, msg)
-                if msg is None:
+                filtered = self._filter(self.model, msg)
+                if filtered is None:
                     continue  # message discarded by filter
+                msg = filtered
 
             # Graceful quit via QuitMsg.
             if isinstance(msg, QuitMsg):
