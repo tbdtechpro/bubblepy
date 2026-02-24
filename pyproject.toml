@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "bubbletea"
+name = "charm-bubbletea"
 version = "0.1.0"
 description = "A Python TUI framework based on The Elm Architecture — port of the Go Bubble Tea library"
 readme = "README.md"
@@ -54,8 +54,11 @@ Repository = "https://github.com/charmbracelet/bubbletea"
 Issues = "https://github.com/charmbracelet/bubbletea/issues"
 "Original Go Library" = "https://github.com/charmbracelet/bubbletea"
 
-[tool.setuptools.packages.find]
-exclude = ["tests*", "examples*"]
+[tool.setuptools]
+packages = ["bubbletea"]
+
+[tool.setuptools.package-dir]
+"bubbletea" = ""
 
 [tool.setuptools.package-data]
 bubbletea = ["py.typed"]
