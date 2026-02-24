@@ -272,8 +272,10 @@ The Python port has zero test coverage. Every module needs tests.
   - Added `[tool.setuptools.package-data]` so the marker is included in sdist/wheel.
   - File: `pyproject.toml`
 
-- [ ] **Run `mypy` over all Python source files and fix all errors**
-  - File: all `.py` files
+- [x] **Run `mypy` over all Python source files and fix all errors**
+  - One error fixed in `tea.py`: filter result assigned to a temp variable (`filtered`)
+    before re-assigning to `msg`, resolving the `Msg | None` incompatible assignment.
+  - File: `tea.py`
 
 - [x] **Ensure all public symbols are exported from `__init__.py`**
   - All new symbols exported: `SuspendMsg`, `ResumeMsg`, `PasteStartMsg`, `PasteEndMsg`,
@@ -320,8 +322,9 @@ The Python port has zero test coverage. Every module needs tests.
   - Spinning food eater; spinner tick + `p.send()` from background thread.
   - File: `examples/send_msg.py` (new)
 
-- [ ] **Port the `exec` example (launch external editor)**
-  - Depends on `exec_process()` being implemented first.
+- [x] **Port the `exec` example (launch external editor)**
+  - Demonstrates `exec_process()`: press `e` to open `$EDITOR` (defaults to vim),
+    `a` to toggle alt-screen, `q` to quit.  `EditorFinishedMsg` carries any error.
   - File: `examples/exec.py` (new)
 
 - [x] **Port the `views` example (multiple views / screens)**
@@ -332,7 +335,10 @@ The Python port has zero test coverage. Every module needs tests.
 
 ## 7. Documentation
 
-- [ ] **Complete `Contributing.md` with Python developer workflow**
+- [x] **Complete `Contributing.md` with Python developer workflow**
+  - Added: architecture table, adding-a-message walkthrough, adding-a-command walkthrough,
+    testing patterns (`make_program`, `send()`, `wait()`, filter testing), debug logging
+    guide, code style rules, running examples, and commit conventions.
   - File: `Contributing.md`
 
 - [x] **Write Python tutorial — basics**
