@@ -13,16 +13,19 @@ conventions, and notes for AI assistants.
 | `messages.py` | All message types (`KeyMsg`, `MouseMsg`, `ClearScreenMsg`, etc.) |
 | `keys.py` | Key parsing, `KeyType` enum |
 | `mouse.py` | Mouse event parsing, `MouseButton`, `MouseAction` |
-| `commands.py` | `Cmd`, `BatchMsg`, `SequenceMsg`, `batch()`, `sequence()`, `tick()`, `every()` |
+| `commands.py` | `Cmd`, `BatchMsg`, `SequenceMsg`, `batch()`, `sequence()`, `tick()`, `every()`, `window_size()` |
 | `renderer.py` | FPS-capped, thread-safe `Renderer` and `NullRenderer` |
-| `screen.py` | Screen control command factories (`enter_alt_screen`, etc.) |
+| `screen.py` | Screen control command factories (`enter_alt_screen`, `suspend`, etc.) |
+| `exec.py` | `ExecCmd`, `exec_process()` — run external processes with terminal handoff |
+| `log.py` | `log_to_file()` — attach a file handler to the root logger for TUI-safe debugging |
 
 ## Experiment documentation
 
 | File | Purpose |
 |------|---------|
 | `README.md` | Project overview — describes the vibe-coding experiment |
-| `MVP_TASKS.md` | Tracked task list: Go→Python feature parity gaps |
+| `MVP_TASKS.md` | Tracked task list: Go→Python feature parity gaps (all items complete) |
+| `MVP_TEST_PLAN.md` | Manual + automated test plan for MVP sign-off |
 | `PYTHON_FEASIBILITY.md` | Analysis of Go features that are hard/infeasible in Python |
 | `CLAUDE.md` | Detailed guide for AI assistants working in this repo |
 | `Contributing.md` | Developer workflow and contribution notes |
