@@ -350,3 +350,58 @@ The Python port has zero test coverage. Every module needs tests.
   - Deep dive into `Cmd`: tick, every, batch, sequence, background I/O, `send()`,
     screen commands, `exec_process()`, and quit patterns.
   - File: `tutorials/python-commands/README.md` (new)
+
+---
+
+## 8. Renderer Correctness & App Integration
+
+Bugs and missing behaviours discovered while building a multi-field form
+application (KeroGrid) against the Python port. Items are ordered by the
+severity of their visible impact on app developers.
+
+- [x] **Renderer: convert `\n` to `\r\n` when writing the view in raw mode**
+  - `tty.setraw()` disables `OPOST`/`ONLCR`. In raw mode `\n` is a pure line
+    feed — it moves the cursor down one row but does **not** return it to column 0.
+    The renderer calls `self.output.write(view)` directly, so every line after
+    the first is written starting at the column where the previous line ended.
+    The layout renders as a staircase or overlapping garbage.
+  - **Fix:** `view.replace("\n", "\r\n")` before writing; `\r` appended to the
+    erase sequence to reset cursor column before each new frame.
+  - Files: `renderer.py` (`_flush`)
+
+- [x] **Renderer: write `\r` before each new frame to reset cursor column**
+  - After the erase sequence the cursor is at an **arbitrary column**. The new
+    view is written from that column, producing rightward drift on every keystroke.
+  - **Fix:** `\r` appended to the erase sequence (both the `_lines_rendered > 0`
+    and `else` branches now guarantee cursor is at column 0 before writing).
+  - Files: `renderer.py` (`_flush`)
+
+- [x] **Renderer: enforce or auto-correct trailing `\n` on view strings**
+  - `_lines_rendered = view.count("\n")` drives the erase-upward loop. A view
+    with no trailing `\n` gives count N−1 for N lines, causing one-line drift
+    per redraw. The renderer now auto-appends `\n` if missing (before change
+    detection so deduplication still works), and `Model.view()` docstring
+    documents the requirement.
+  - Files: `renderer.py` (`_flush`), `model.py` (docstring)
+
+- [x] **Program: send `WindowSizeMsg` at startup, not only on `SIGWINCH`**
+  - `WindowSizeMsg` was only emitted from the `SIGWINCH` handler. Any model
+    initialising dimensions to a default (e.g. 80×24) used those values for
+    the entire session unless the user resized. Now enqueued unconditionally
+    after `_setup_signals()` and before `model.init()`. Falls back to 80×24
+    when no TTY is available (headless/test environments), matching Go's
+    guarantee that `WindowSizeMsg` is always the first message the model sees.
+  - Files: `tea.py` (`run`)
+
+- [x] **Add Python example: multi-field form with text input and navigation**
+  - Added `examples/form.py` — username + password form with Tab/Shift-Tab
+    navigation, inline cursor editing, masked password display, and a submit
+    button that shows collected values. Demonstrates `tea.Quit` alias.
+  - Files: `examples/form.py` (new)
+
+- [x] **Clarify `quit_cmd` naming to prevent misuse — add `Quit` alias**
+  - `tea.quit_cmd` is a **function** used as a `Cmd`. The name invites
+    `tea.quit_cmd()` which passes `QuitMsg()` as a `Cmd`, raising `TypeError`.
+    Added `Quit = quit_cmd` alias matching Go's `tea.Quit`, exported from
+    `__init__.py`. `tea.quit_cmd` remains for backward compatibility.
+  - Files: `commands.py`, `__init__.py`
