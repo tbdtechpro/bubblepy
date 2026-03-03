@@ -225,7 +225,7 @@ class TestRendererRawModeOutput:
         erase_seq = "\x1b[A\x1b[2K" * 2
         idx = written.find(erase_seq)
         assert idx != -1
-        after_erase = written[idx + len(erase_seq):]
+        after_erase = written[idx + len(erase_seq) :]
         assert after_erase.startswith("\r"), "output after erase must start with \\r"
 
     def test_flush_auto_appends_trailing_newline(self):
@@ -234,6 +234,4 @@ class TestRendererRawModeOutput:
         r = Renderer(output=out, fps=120)
         r.render("line1\nline2")  # no trailing \n
         r._flush()
-        assert r._lines_rendered == 2, (
-            f"expected 2 lines rendered, got {r._lines_rendered}"
-        )
+        assert r._lines_rendered == 2, f"expected 2 lines rendered, got {r._lines_rendered}"
