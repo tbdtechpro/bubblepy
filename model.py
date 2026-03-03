@@ -48,7 +48,19 @@ class Model(ABC):
         """
         Render the model as a string for display.
 
+        The returned string must end with a trailing newline (``\n``).
+        The renderer counts newlines to determine how many lines to erase
+        on the next frame; omitting the trailing newline causes the count
+        to be off by one, making the UI drift down by one line per redraw.
+        The renderer auto-corrects a missing trailing newline, but relying
+        on this is not recommended.
+
+        Example::
+
+            def view(self) -> str:
+                return f"Counter: {self.count}\n"
+
         Returns:
-            A string representation of the current UI state
+            A string representation of the current UI state, ending with ``\n``.
         """
         pass
