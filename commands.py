@@ -42,6 +42,11 @@ def quit_cmd() -> Msg:
     return QuitMsg()
 
 
+# Quit is an alias for quit_cmd that matches Go's tea.Quit naming.
+# Pass the reference as a Cmd — do not call it: return model, tea.Quit
+Quit = quit_cmd
+
+
 def batch(*cmds: Optional[Cmd]) -> Optional[Cmd]:
     """Combine multiple commands into one that runs them concurrently.
 

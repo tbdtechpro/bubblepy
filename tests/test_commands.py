@@ -3,6 +3,7 @@
 import threading
 import time
 
+import bubbletea as tea
 from bubbletea.commands import (
     BatchMsg,
     SequenceMsg,
@@ -26,6 +27,15 @@ from bubbletea.messages import (
 class TestQuitCmd:
     def test_returns_quit_msg(self):
         assert isinstance(quit_cmd(), QuitMsg)
+
+    def test_quit_alias_exists_and_is_callable_as_cmd(self):
+        """tea.Quit must exist as a Cmd (callable returning QuitMsg), not a Msg."""
+        from bubbletea.messages import QuitMsg
+
+        assert hasattr(tea, "Quit"), "tea.Quit alias must exist"
+        assert callable(tea.Quit), "tea.Quit must be callable (it is a Cmd)"
+        result = tea.Quit()
+        assert isinstance(result, QuitMsg), "tea.Quit() must return QuitMsg"
 
 
 class TestBatch:

@@ -7,6 +7,7 @@ Ported from the Go library: https://github.com/charmbracelet/bubbletea
 from .commands import (
     BatchMsg,
     Cmd,
+    Quit,
     SequenceMsg,
     batch,
     clear_screen,
@@ -82,6 +83,7 @@ __all__ = [
     "Cmd",
     "BatchMsg",
     "SequenceMsg",
+    "Quit",
     "quit_cmd",
     "batch",
     "sequence",
