@@ -118,6 +118,13 @@ class Renderer:
         the terminal's scrollback buffer.  The TUI is then redrawn below
         them.  If neither prints nor a view change are pending, returns
         immediately.
+
+        The view's ``\\n`` line endings are converted to ``\\r\\n`` before
+        writing.  Raw mode disables the kernel's ONLCR output processing, so
+        a bare ``\\n`` only moves the cursor down — it does not return to
+        column 0.  Converting here keeps ``_lines_rendered`` correct (both
+        ``\\n`` and ``\\r\\n`` contain one ``\\n``) and is harmless when
+        ONLCR is active (the extra ``\\r`` is a no-op at column 0).
         """
         with self._lock:
             pending_prints = self._print_queue[:]
@@ -150,8 +157,9 @@ class Renderer:
             for line in pending_prints:
                 self.output.write(line + "\r\n")
 
-            # Fix: in raw mode tty.setraw() disables OPOST/ONLCR, so \n is a
-            # pure line feed with no carriage return.  Convert every \n to \r\n.
+            # Write the TUI view.  Convert \n to \r\n because raw mode
+            # disables ONLCR; a bare \n only moves the cursor down without
+            # returning to column 0, producing a staircase effect.
             self.output.write(view.replace("\n", "\r\n"))
             self.output.flush()
 
