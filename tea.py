@@ -146,6 +146,18 @@ class Program:
             self._renderer.start()  # begin FPS-capped render ticker
             self._setup_signals()
 
+            # Enqueue initial terminal size so layout-sensitive models receive
+            # accurate dimensions on the very first message, matching Go's
+            # behaviour (Go always delivers WindowSizeMsg as the first Msg).
+            try:
+                sz = os.get_terminal_size()
+                w, h = sz.columns, sz.lines
+            except OSError:
+                # No TTY (headless/test environment) — use placeholder dimensions.
+                # In production a real terminal always provides a real size above.
+                w, h = 80, 24
+            self._msg_queue.put(WindowSizeMsg(w, h))
+
             # Initialize model and queue the initial render.
             try:
                 cmd = self.model.init()

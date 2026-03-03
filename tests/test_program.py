@@ -281,3 +281,37 @@ class TestStopEvent:
         final = p.run()  # should return without raising
         assert final is model
         t.join()
+
+
+class TestWindowSizeMsg:
+    def test_window_size_msg_sent_at_startup(self):
+        """Program must enqueue WindowSizeMsg before the event loop starts."""
+        received = []
+
+        class SizeCapture(tea.Model):
+            def init(self):
+                return None
+
+            def update(self, msg):
+                if isinstance(msg, tea.WindowSizeMsg):
+                    received.append((msg.width, msg.height))
+                    return self, tea.quit_cmd
+                return self, None
+
+            def view(self):
+                return ".\n"
+
+        p = make_program(SizeCapture())
+
+        def killer():
+            time.sleep(0.5)
+            p.kill()
+
+        t = threading.Thread(target=killer, daemon=True)
+        t.start()
+        try:
+            p.run()
+        except tea.ErrProgramKilled:
+            pass
+        t.join()
+        assert len(received) >= 1, "expected at least one WindowSizeMsg at startup"
