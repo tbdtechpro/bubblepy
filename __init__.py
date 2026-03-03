@@ -24,6 +24,7 @@ from .log import log_to_file
 from .messages import (
     BlurMsg,
     ClearScreenMsg,
+    CustomMsg,
     FocusMsg,
     InterruptMsg,
     KeyMsg,
@@ -58,6 +59,7 @@ __all__ = [
     "Program",
     # Messages
     "Msg",
+    "CustomMsg",
     "KeyMsg",
     "MouseMsg",
     "WindowSizeMsg",
