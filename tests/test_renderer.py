@@ -198,3 +198,42 @@ class TestNullRenderer:
         nr.render("anything")
         nr.stop()
         assert buf.getvalue() == ""
+
+
+class TestRendererRawModeOutput:
+    def test_flush_converts_newlines_to_crlf(self):
+        """In raw mode \n must become \r\n so the cursor returns to column 0."""
+        out = io.StringIO()
+        r = Renderer(output=out, fps=120)
+        r.render("line1\nline2\n")
+        r._flush()
+        assert "\r\n" in out.getvalue(), "expected \\r\\n line endings in output"
+        # After the erase/reset block the view is written starting at column 0.
+        # There must be no consecutive \r characters (which would indicate a bug).
+        assert "\r\r" not in out.getvalue(), "consecutive \\r characters must not appear"
+
+    def test_flush_prepends_cr_to_reset_cursor_column(self):
+        """First character written must be \r to reset cursor to column 0."""
+        out = io.StringIO()
+        r = Renderer(output=out, fps=120)
+        # Simulate a prior render so _lines_rendered > 0
+        r._lines_rendered = 2
+        r._last_render = "old\nold\n"
+        r.render("new\nnew\n")
+        r._flush()
+        written = out.getvalue()
+        erase_seq = "\x1b[A\x1b[2K" * 2
+        idx = written.find(erase_seq)
+        assert idx != -1
+        after_erase = written[idx + len(erase_seq):]
+        assert after_erase.startswith("\r"), "output after erase must start with \\r"
+
+    def test_flush_auto_appends_trailing_newline(self):
+        """View without trailing \n must be auto-corrected so line count is right."""
+        out = io.StringIO()
+        r = Renderer(output=out, fps=120)
+        r.render("line1\nline2")  # no trailing \n
+        r._flush()
+        assert r._lines_rendered == 2, (
+            f"expected 2 lines rendered, got {r._lines_rendered}"
+        )

@@ -124,6 +124,10 @@ class Renderer:
             self._print_queue.clear()
 
             view = self._pending_view
+            # Fix: normalize trailing \n before the change-detection comparison
+            # so that "hello" and "hello\n" are treated as the same view.
+            if view is not None and not view.endswith("\n"):
+                view += "\n"
             view_changed = view is not None and view != self._last_render
 
             if not pending_prints and not view_changed:
@@ -135,9 +139,10 @@ class Renderer:
             if view is None:
                 view = self._last_render
 
-            # Erase the previous TUI render.
+            # Erase the previous TUI render and reset cursor to column 0.
             if self._lines_rendered > 0:
-                self.output.write("\x1b[A\x1b[2K" * self._lines_rendered)
+                # Move up N lines (erasing each) then carriage-return to col 0.
+                self.output.write("\x1b[A\x1b[2K" * self._lines_rendered + "\r")
             else:
                 self.output.write("\r\x1b[2K")
 
@@ -145,8 +150,9 @@ class Renderer:
             for line in pending_prints:
                 self.output.write(line + "\r\n")
 
-            # Write the TUI view.
-            self.output.write(view)
+            # Fix: in raw mode tty.setraw() disables OPOST/ONLCR, so \n is a
+            # pure line feed with no carriage return.  Convert every \n to \r\n.
+            self.output.write(view.replace("\n", "\r\n"))
             self.output.flush()
 
             self._lines_rendered = view.count("\n")
