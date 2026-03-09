@@ -10,19 +10,19 @@ with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 setup(
-    name="charm-bubbletea",
+    name="bubblepy",
     version="0.1.0",
     description="A Python TUI framework based on The Elm Architecture (port of Go Bubble Tea)",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/charmbracelet/bubbletea",
+    url="https://github.com/tbdtechpro/bubblepy",
     author="Charm",
     author_email="vt100@charm.sh",
     license="MIT",
     # Flat-layout: all source files live at the repo root alongside __init__.py.
     # Explicitly list the package and map it to "" so setuptools finds the right files.
-    packages=["bubbletea"],
-    package_dir={"bubbletea": ""},
+    packages=["bubblepy"],
+    package_dir={"bubblepy": ""},
     python_requires=">=3.10",
     # No external dependencies for core functionality
     install_requires=[],
@@ -40,7 +40,7 @@ setup(
     # Entry points (if you want CLI commands)
     entry_points={
         "console_scripts": [
-            # "bubbletea-example=examples.basics:main",
+            # "bubblepy-example=examples.basics:main",
         ],
     },
     # Classifiers for PyPI
@@ -67,18 +67,18 @@ setup(
         "cli",
         "console",
         "elm-architecture",
-        "bubbletea",
+        "bubblepy",
         "charm",
         "user-interface",
     ],
     # Include type hints
     package_data={
-        "bubbletea": ["py.typed"],
+        "bubblepy": ["py.typed"],
     },
     # Project URLs
     project_urls={
-        "Bug Reports": "https://github.com/charmbracelet/bubbletea/issues",
-        "Source": "https://github.com/charmbracelet/bubbletea",
+        "Bug Reports": "https://github.com/tbdtechpro/bubblepy/issues",
+        "Source": "https://github.com/tbdtechpro/bubblepy",
         "Original Go Library": "https://github.com/charmbracelet/bubbletea",
     },
 )

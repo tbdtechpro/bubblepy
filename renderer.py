@@ -46,7 +46,7 @@ class Renderer:
         self._ticker_thread = threading.Thread(
             target=self._ticker_loop,
             daemon=True,
-            name="bubbletea-renderer",
+            name="bubblepy-renderer",
         )
         self._ticker_thread.start()
 
