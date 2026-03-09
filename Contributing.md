@@ -21,7 +21,7 @@ Contributions are welcome, but be aware that:
 
 ```bash
 git clone <repo-url>
-cd bubbletea
+cd bubblepy
 python -m venv venv
 source venv/bin/activate          # or venv\Scripts\activate on Windows
 pip install -e ".[dev]"
@@ -140,7 +140,7 @@ fixtures in `tests/conftest.py` to create headless `Program` instances:
 ```python
 # tests/test_example.py
 from tests.conftest import make_program
-import bubbletea as tea
+import bubblepy as tea
 
 def test_my_feature():
     # make_program uses NullRenderer and StringIO output — no real terminal needed.
@@ -168,7 +168,7 @@ The TUI owns the terminal; never print to stdout/stderr during a running program
 Use file logging instead:
 
 ```python
-import bubbletea as tea
+import bubblepy as tea
 handler = tea.log_to_file("debug.log", "myapp")
 # ... run program ...
 handler.close()

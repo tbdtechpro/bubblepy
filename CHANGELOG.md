@@ -60,11 +60,11 @@ The Python port uses [Semantic Versioning](https://semver.org/).
   - `examples/exec.py` — launch `$EDITOR` via `exec_process()` with full terminal handoff.
 
 - **Packaging fixes** (found during lipgloss integration)
-  - Distribution renamed from `bubbletea` to `charm-bubbletea` to avoid PyPI name collision
-    with an unrelated medical chatbot library.  Import name (`import bubbletea`) is unchanged.
+  - Distribution renamed from `bubblepy` to `charm-bubblepy` to avoid PyPI name collision
+    with an unrelated medical chatbot library.  Import name (`import bubblepy`) is unchanged.
   - Flat-layout editable install fixed: `pyproject.toml` and `setup.py` now use
-    `packages = ["bubbletea"]` + `package-dir = {"bubbletea": ""}` so `pip install -e .`
-    generates a valid editable mapping and `import bubbletea` works without `.pth` hacks.
+    `packages = ["bubblepy"]` + `package-dir = {"bubblepy": ""}` so `pip install -e .`
+    generates a valid editable mapping and `import bubblepy` works without `.pth` hacks.
   - `tutorials/` and `examples/` directories no longer leak as namespace packages in the
     installed distribution.
 

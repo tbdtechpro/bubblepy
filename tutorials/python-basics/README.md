@@ -42,7 +42,7 @@ The runtime loop is:
 ## Step 1 — The simplest possible program
 
 ```python
-import bubbletea as tea
+import bubblepy as tea
 
 class Model(tea.Model):
     def init(self):

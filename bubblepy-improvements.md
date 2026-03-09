@@ -1,7 +1,7 @@
-# bubbletea — Renderer & App Integration Issues
-# Source: discovered while building KeroGrid with bubbletea + lipgloss
+# bubblepy — Renderer & App Integration Issues
+# Source: discovered while building KeroGrid with bubblepy + lipgloss
 #
-# COPY TARGET: append this block to MVP_TASKS.md in tbdtechpro/bubbletea
+# COPY TARGET: append this block to MVP_TASKS.md in tbdtechpro/bubblepy
 # as a new top-level section.
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -94,7 +94,7 @@ severity of their visible impact on app developers.
     not directly portable due to the `bubbles` component library.
   - **Deliverable:** `examples/form.py` — a minimal username + password form
     with tab navigation, inline cursor editing, and a submit button that
-    displays the collected values. No external dependencies beyond bubbletea.
+    displays the collected values. No external dependencies beyond bubblepy.
   - Files: `examples/form.py` (new)
 
 - [ ] **Clarify `quit_cmd` naming to prevent misuse**

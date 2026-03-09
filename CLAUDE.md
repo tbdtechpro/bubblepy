@@ -16,7 +16,7 @@ Bubble Tea is a terminal UI framework based on [The Elm Architecture](https://gu
 ## Repository Structure
 
 ```
-bubbletea/
+bubblepy/
 ├── # Go source files (root package `tea`)
 ├── tea.go                  # Core Program struct, event loop, lifecycle
 ├── tea_init.go             # Program initialization (terminal setup)
@@ -210,7 +210,7 @@ pytest
 ### Python Program Constructor
 
 ```python
-import bubbletea as tea
+import bubblepy as tea
 
 p = tea.Program(
     model,

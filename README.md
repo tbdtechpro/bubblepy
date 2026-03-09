@@ -1,4 +1,4 @@
-# bubbletea — Python port (experiment)
+# bubblepy — Python port (experiment)
 
 This repository is an experiment to explore how feasible it is to translate a non-trivial Go library into idiomatic Python using AI-assisted ("vibe coded") development with minimal direct human authorship of the code itself.
 

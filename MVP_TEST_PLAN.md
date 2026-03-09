@@ -10,7 +10,7 @@ verifying end-to-end behaviour that cannot be fully covered by headless unit tes
 
 ```bash
 git clone <repo-url>
-cd bubbletea
+cd bubblepy
 python -m venv venv
 source venv/bin/activate
 pip install -e ".[dev]"
@@ -230,7 +230,7 @@ This is exercised by the automated tests (`test_program.py::test_stop_event_exit
 can also be validated manually by inspecting the test or writing a small script:
 
 ```python
-import threading, bubbletea as tea, io
+import threading, bubblepy as tea, io
 from tests.conftest import make_program
 
 stop = threading.Event()
@@ -269,8 +269,8 @@ flake8
 ```bash
 pip install build
 python -m build --wheel --outdir /tmp/bt-dist .
-pip install /tmp/bt-dist/bubbletea-*.whl --force-reinstall
-python -c "import bubbletea as tea; print(tea.__version__)"
+pip install /tmp/bt-dist/bubblepy-*.whl --force-reinstall
+python -c "import bubblepy as tea; print(tea.__version__)"
 ```
 
 **Expected output**: `0.1.0`
@@ -278,11 +278,11 @@ python -c "import bubbletea as tea; print(tea.__version__)"
 **Checklist**:
 - [ ] Wheel builds without errors
 - [ ] Package installs cleanly
-- [ ] `import bubbletea` succeeds and `__version__` is correct
+- [ ] `import bubblepy` succeeds and `__version__` is correct
 - [ ] `py.typed` marker is present in the installed package (enables type checking for
   downstream users):
   ```bash
-  python -c "import importlib.resources as r, bubbletea; print(list(r.files(bubbletea).iterdir()))" | grep py.typed
+  python -c "import importlib.resources as r, bubblepy; print(list(r.files(bubblepy).iterdir()))" | grep py.typed
   ```
 
 ---

@@ -294,7 +294,7 @@ The Python port has zero test coverage. Every module needs tests.
   - File: `.github/workflows/python.yml` (new)
 
 - [x] **Add Python coverage reporting**
-  - Separate `coverage` job: `pytest --cov=bubbletea --cov-fail-under=60`.
+  - Separate `coverage` job: `pytest --cov=bubblepy --cov-fail-under=60`.
   - `pytest-cov` already listed in `[project.optional-dependencies]`.
   - File: `.github/workflows/python.yml`
 
