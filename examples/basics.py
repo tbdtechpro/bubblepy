@@ -11,7 +11,7 @@ from typing import Dict, Optional, Tuple
 # Add parent directory to path for development
 sys.path.insert(0, str(__file__).rsplit("/", 2)[0])
 
-import bubbletea as tea
+import bubblepy as tea
 
 
 class ShoppingListModel(tea.Model):

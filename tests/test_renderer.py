@@ -3,7 +3,7 @@
 import io
 import time
 
-from bubbletea.renderer import NullRenderer, Renderer
+from bubblepy.renderer import NullRenderer, Renderer
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 

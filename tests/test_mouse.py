@@ -1,6 +1,6 @@
 """Tests for mouse.py — parse_mouse_event()."""
 
-from bubbletea.mouse import (
+from bubblepy.mouse import (
     MouseAction,
     MouseButton,
     parse_mouse_event,

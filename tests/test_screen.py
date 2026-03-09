@@ -1,8 +1,8 @@
 """Tests for screen.py — command factories and message types."""
 
-import bubbletea as tea
-from bubbletea.messages import SuspendMsg
-from bubbletea.screen import (
+import bubblepy as tea
+from bubblepy.messages import SuspendMsg
+from bubblepy.screen import (
     DisableMouseMsg,
     EnableMouseAllMotionMsg,
     EnableMouseCellMotionMsg,

@@ -20,7 +20,7 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Optional
 
-import bubbletea as tea
+import bubblepy as tea
 
 URL = "https://charm.sh"
 

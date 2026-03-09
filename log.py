@@ -32,7 +32,7 @@ def log_to_file(path: str, prefix: str = "") -> logging.FileHandler:
 
     Example::
 
-        import bubbletea as tea
+        import bubblepy as tea
 
         fh = tea.log_to_file("debug.log", "myapp")
         # In a second terminal: tail -f debug.log

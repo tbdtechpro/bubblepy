@@ -17,7 +17,7 @@ from typing import Optional, Tuple
 
 sys.path.insert(0, str(__file__).rsplit("/", 2)[0])
 
-import bubbletea as tea
+import bubblepy as tea
 
 # ── Field indices ────────────────────────────────────────────────────────────
 

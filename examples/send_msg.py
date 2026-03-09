@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from dataclasses import dataclass
 from typing import Optional
 
-import bubbletea as tea
+import bubblepy as tea
 
 FOODS = [
     "an apple",

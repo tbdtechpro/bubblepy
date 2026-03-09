@@ -1,6 +1,6 @@
 """Tests for keys.py — parse_key() and Key class."""
 
-from bubbletea.keys import Key, KeyType, parse_key
+from bubblepy.keys import Key, KeyType, parse_key
 
 
 class TestParseKey:

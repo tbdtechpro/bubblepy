@@ -6,8 +6,8 @@ from typing import Optional
 
 import pytest
 
-import bubbletea as tea
-from bubbletea.renderer import NullRenderer
+import bubblepy as tea
+from bubblepy.renderer import NullRenderer
 from tests.conftest import make_program
 
 # ── Minimal models ────────────────────────────────────────────────────────────
