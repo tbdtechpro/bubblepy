@@ -1,5 +1,5 @@
 """
-Bubble Tea - A Python TUI framework based on The Elm Architecture.
+bubblepy - A Python TUI framework based on The Elm Architecture.
 
 Ported from the Go library: https://github.com/charmbracelet/bubbletea
 """

@@ -1,4 +1,4 @@
-"""Setup file for Bubble Tea Python port."""
+"""Setup file for bubblepy — Python TUI framework."""
 
 import os
 
