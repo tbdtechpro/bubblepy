@@ -4,9 +4,11 @@ import os
 import select
 import signal
 import sys
-import termios
-import tty
 from queue import Empty, Queue
+
+if sys.platform != "win32":
+    import termios
+    import tty
 from threading import Event, Thread
 from typing import Any, Callable, Optional, TextIO
 
@@ -128,7 +130,7 @@ class Program:
         self._interrupted = Event()
         self._done = Event()
         self._running = False
-        self._old_termios: Optional[list] = None
+        self._old_termios: Optional[Any] = None
         self._input_thread: Optional[Thread] = None
         self._panic: Optional[BaseException] = None
 
@@ -405,9 +407,26 @@ class Program:
         """Set up the terminal for raw mode."""
         # Save current terminal settings
         if self.input_tty.isatty():
-            fd = self.input_tty.fileno()
-            self._old_termios = termios.tcgetattr(fd)
-            tty.setraw(fd)
+            if sys.platform == "win32":
+                import ctypes
+                import ctypes.wintypes
+                _ENABLE_PROCESSED_INPUT = 0x0001
+                _ENABLE_LINE_INPUT = 0x0002
+                _ENABLE_ECHO_INPUT = 0x0004
+                _ENABLE_VT_INPUT = 0x0200
+                handle = ctypes.windll.kernel32.GetStdHandle(-10)
+                mode = ctypes.wintypes.DWORD()
+                ctypes.windll.kernel32.GetConsoleMode(handle, ctypes.byref(mode))
+                self._old_termios = mode.value
+                new_mode = (
+                    (mode.value & ~_ENABLE_PROCESSED_INPUT & ~_ENABLE_LINE_INPUT & ~_ENABLE_ECHO_INPUT)
+                    | _ENABLE_VT_INPUT
+                )
+                ctypes.windll.kernel32.SetConsoleMode(handle, new_mode)
+            else:
+                fd = self.input_tty.fileno()
+                self._old_termios = termios.tcgetattr(fd)
+                tty.setraw(fd)
 
         # Enter alt screen if requested
         if self._use_alt_screen:
@@ -442,8 +461,14 @@ class Program:
 
         # Restore terminal
         if self._old_termios is not None and self.input_tty.isatty():
-            fd = self.input_tty.fileno()
-            termios.tcsetattr(fd, termios.TCSADRAIN, self._old_termios)
+            if sys.platform == "win32":
+                import ctypes
+                ctypes.windll.kernel32.SetConsoleMode(
+                    ctypes.windll.kernel32.GetStdHandle(-10), self._old_termios
+                )
+            else:
+                fd = self.input_tty.fileno()
+                termios.tcsetattr(fd, termios.TCSADRAIN, self._old_termios)
 
         # Disable bracketed paste
         if self._bracketed_paste:
@@ -481,7 +506,8 @@ class Program:
             self._msg_queue.put(QuitMsg())
 
         try:
-            signal.signal(signal.SIGWINCH, handle_resize)
+            if hasattr(signal, "SIGWINCH"):
+                signal.signal(signal.SIGWINCH, handle_resize)
             signal.signal(signal.SIGINT, handle_int)
             signal.signal(signal.SIGTERM, handle_term)
         except ValueError:
@@ -515,7 +541,13 @@ class Program:
             self.output.flush()
 
         if self._old_termios is not None and self.input_tty.isatty():
-            termios.tcsetattr(self.input_tty.fileno(), termios.TCSADRAIN, self._old_termios)
+            if sys.platform == "win32":
+                import ctypes
+                ctypes.windll.kernel32.SetConsoleMode(
+                    ctypes.windll.kernel32.GetStdHandle(-10), self._old_termios
+                )
+            else:
+                termios.tcsetattr(self.input_tty.fileno(), termios.TCSADRAIN, self._old_termios)
 
     def restore_terminal(self) -> None:
         """Reclaim the terminal after release_terminal().
@@ -525,7 +557,23 @@ class Program:
         Equivalent to Go's Program.RestoreTerminal().
         """
         if self.input_tty.isatty():
-            tty.setraw(self.input_tty.fileno())
+            if sys.platform == "win32":
+                import ctypes
+                import ctypes.wintypes
+                _ENABLE_PROCESSED_INPUT = 0x0001
+                _ENABLE_LINE_INPUT = 0x0002
+                _ENABLE_ECHO_INPUT = 0x0004
+                _ENABLE_VT_INPUT = 0x0200
+                handle = ctypes.windll.kernel32.GetStdHandle(-10)
+                mode = ctypes.wintypes.DWORD()
+                ctypes.windll.kernel32.GetConsoleMode(handle, ctypes.byref(mode))
+                new_mode = (
+                    (mode.value & ~_ENABLE_PROCESSED_INPUT & ~_ENABLE_LINE_INPUT & ~_ENABLE_ECHO_INPUT)
+                    | _ENABLE_VT_INPUT
+                )
+                ctypes.windll.kernel32.SetConsoleMode(handle, new_mode)
+            else:
+                tty.setraw(self.input_tty.fileno())
 
         if self._use_alt_screen:
             self._renderer.enter_alt_screen()
@@ -655,8 +703,14 @@ class Program:
             paste_buf: list[str] = []
 
             while not self._quit.is_set():
-                # Use select to avoid blocking
-                if sys.platform != "win32":
+                # Use select (Unix) or kbhit (Windows) to avoid blocking
+                if sys.platform == "win32":
+                    import msvcrt
+                    import time
+                    if not msvcrt.kbhit():
+                        time.sleep(0.01)
+                        continue
+                else:
                     readable, _, _ = select.select([fd], [], [], 0.1)
                     if not readable:
                         continue
