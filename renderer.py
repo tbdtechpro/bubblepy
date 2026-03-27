@@ -24,6 +24,13 @@ class Renderer:
         output: TextIO = sys.stdout,
         fps: int = 60,
     ):
+        if (
+            sys.platform == "win32"
+            and output is sys.stdout
+            and getattr(output, "encoding", "utf-8").lower().replace("-", "") != "utf8"
+        ):
+            import io
+            output = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", newline="")
         self.output = output
         self.fps = max(1, min(fps, 120))  # clamp to [1, 120]
 
