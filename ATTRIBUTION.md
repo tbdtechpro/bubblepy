@@ -2,9 +2,9 @@
 
 ## This Project
 
-Architect / Product Lead: Matt
+Designed, directed and maintained by Matt Phelps ([@tbdtechpro](https://github.com/tbdtechpro)).
 
-Implementing Engineer: Claude
+Built with AI-assisted development using Claude ([Anthropic](https://anthropic.com)).
 
 The Guru that Legends Foretold: HatDog
 
@@ -15,5 +15,3 @@ Original Bubble Tea Library and Go Implementation: [Charm](https://charm.sh)
 
 The Elm Architecture (Model / Update / View): [Evan Czaplicki](https://github.com/evancz)
 — the pattern this entire framework is built upon
-
-Claude (the model powering the Implementing Engineer): [Anthropic](https://anthropic.com)

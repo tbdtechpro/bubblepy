@@ -23,7 +23,7 @@ conventions, and notes for AI assistants.
 
 | File | Purpose |
 |------|---------|
-| `README.md` | Project overview — describes the vibe-coding experiment |
+| `README.md` | Project overview, design approach and status |
 | `MVP_TASKS.md` | Tracked task list: Go→Python feature parity gaps (all items complete) |
 | `MVP_TEST_PLAN.md` | Manual + automated test plan for MVP sign-off |
 | `PYTHON_FEASIBILITY.md` | Analysis of Go features that are hard/infeasible in Python |

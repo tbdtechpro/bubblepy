@@ -2,7 +2,7 @@
 
 This document analyses elements of the Go Bubble Tea library that are difficult or
 impossible to replicate faithfully in a Python port.  It is written to support an honest
-assessment of the experiment's limits, not to encourage work-arounds.
+assessment of the port's limits, not to encourage work-arounds.
 
 Items are grouped by severity.
 
@@ -40,7 +40,11 @@ fragile, untestable without a Windows host, and maintenance-heavy. The existing 
 files do not implement any of this, and there is no realistic path to a well-tested
 implementation without dedicated Windows work outside an AI-assisted workflow.
 
-**Bottom line:** The Python port is Unix-only for the foreseeable future.
+**Bottom line (original assessment):** The Python port is Unix-only for the foreseeable future.
+
+**Update (2026-03-27):** Basic Windows support has since been added (commits `500fc01`, `3744546`):
+`ctypes` console raw mode, `msvcrt` keyboard input, guarded `termios`/`SIGWINCH` imports and UTF-8
+stdout. `ReadConsoleInput`-level fidelity (virtual key codes, mouse) remains unported.
 
 ---
 
